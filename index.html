@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="PGSPN: Physics-Guided Underwater Depth Completion">
+  <meta name="keywords" content="PGSPN, Depth Completion, Underwater, Physics-Guided">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PGSPN: Physics-Guided Spatial Propagation Network for Sparsity-Robust Underwater Depth Completion</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700|Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/favicon.png">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body class="has-navbar-fixed-top">
+
+<!-- ==================== Navigation Bar ==================== -->
+<nav class="navbar is-fixed-top pgspn-navbar" role="navigation" aria-label="main navigation">
+  <div class="container is-max-fullhd">
+    <div id="pgspnNavbar" class="navbar-menu">
+      <div class="navbar-start">
+        <a class="navbar-item nav-link" href="#abstract">Abstract</a>
+        <a class="navbar-item nav-link" href="#key-insights">Key Insights</a>
+        <a class="navbar-item nav-link" href="#supplementary">Supplementary</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== Hero Title Bar ==================== -->
+<section class="hero is-medium is-bold is-primary" id="top">
+  <div class="hero-body">
+    <div class="container is-max-fullhd has-text-centered">
+      <h1 class="title is-2 publication-title">
+        <span style="color: #ffc800;">PGSPN</span>: <span style="color: #ffc800;">P</span>hysics-<span style="color: #ffc800;">G</span>uided <span style="color: #ffc800;">S</span>patial <span style="color: #ffc800;">P</span>ropagation <span style="color: #ffc800;">N</span>etwork<br>for Sparsity-Robust Underwater Depth Completion
+      </h1>
+      <div style="margin-top: 1.25rem;">
+        <div class="publication-links">
+          <span class="link-block">
+            <a href="https://github.com/guestcomputervision/PGSPN" class="external-link button is-normal is-rounded is-dark" target="_blank">
+              <span class="icon"><i class="fab fa-github"></i></span>
+              <span>Code</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a href="./static/pdf/supplementary_material.pdf" class="external-link button is-normal is-rounded is-dark" target="_blank">
+              <span class="icon"><i class="fas fa-file-pdf"></i></span>
+              <span>Supplementary</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="external-link button is-normal is-rounded is-dark" target="_blank">
+              <span class="icon"><i class="fas fa-file-pdf"></i></span>
+              <span>Paper (Coming Soon)</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="external-link button is-normal is-rounded is-dark" target="_blank">
+              <span class="icon"><i class="ai ai-arxiv"></i></span>
+              <span>arXiv (Coming Soon)</span>
+            </a>
+          </span>
+          <span class="link-block">
+            <a class="external-link button is-normal is-rounded is-dark" target="_blank">
+              <span class="icon"><i class="fab fa-youtube"></i></span>
+              <span>Video (Coming Soon)</span>
+            </a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Abstract ==================== -->
+<section class="section" id="abstract">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Depth completion has achieved remarkable progress in terrestrial environments. However, these environments predominantly assume uniformly distributed sparse depth across scenes. Unlike terrestrial scenarios, underwater environments present two critical challenges. First, sparse depth typically exhibits highly irregular or spatially biased distributions. Second, extensive regions without depth measurements, such as open water, exacerbate depth bleeding, erroneous propagation of depth values from supervised into unsupervised areas. To address these challenges, we propose PGSPN, to our knowledge, the first physics-guided underwater depth completion framework. Rather than relying solely on irregular sparse measurements, PGSPN leverages underwater optical physics to construct a sparsity-robust metric prior. Specifically, we estimate per-channel transmission maps from the input image and rescale them to metric scale, generating a physics-based prior that remains reliable even under extreme sparsity. Then, to prevent depth bleeding during refinement, we introduce attenuation-aware spatial propagation that reduces propagation weights for pixels with large depth discrepancies. Finally, experiments on FLSea-Stereo and FLSea-VI demonstrate state-of-the-art performance with superior robustness in handling irregular sparsity patterns.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Key Insights ==================== -->
+<section class="section highlight-section" id="key-insights">
+  <div class="container is-max-fullhd">
+    <h2 class="title is-3 has-text-centered">Key Insights</h2>
+    <div class="columns is-centered" style="margin-top: 1.5rem;">
+      <div class="column is-4">
+        <div class="highlight-card">
+          <h3 class="title is-5">
+            <span class="icon" style="color: #00d1b2;"><i class="fas fa-water"></i></span>
+            임시 제목 1
+          </h3>
+          <p>임시 내용입니다. 추후 실제 내용으로 교체될 예정입니다.</p>
+        </div>
+      </div>
+      <div class="column is-4">
+        <div class="highlight-card">
+          <h3 class="title is-5">
+            <span class="icon" style="color: #3273dc;"><i class="fas fa-layer-group"></i></span>
+            임시 제목 2
+          </h3>
+          <p>임시 내용입니다. 추후 실제 내용으로 교체될 예정입니다.</p>
+        </div>
+      </div>
+      <div class="column is-4">
+        <div class="highlight-card">
+          <h3 class="title is-5">
+            <span class="icon" style="color: #ff3860;"><i class="fas fa-chart-line"></i></span>
+            임시 제목 3
+          </h3>
+          <p>임시 내용입니다. 추후 실제 내용으로 교체될 예정입니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Supplementary ==================== -->
+<section class="section" id="supplementary">
+  <div class="container is-max-fullhd">
+    <h2 class="title is-3 has-text-centered">Supplementary</h2>
+    <div class="columns is-centered" style="margin-top: 1.5rem;">
+      <div class="column is-four-fifths">
+        <div class="pdf-viewer-wrapper">
+          <div class="pdf-viewer-toolbar">
+            <div class="pdf-viewer-toolbar-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span class="pdf-viewer-toolbar-title">supplementary_material.pdf</span>
+            <a href="./static/pdf/supplementary_material.pdf" target="_blank"
+               style="color: #aaa; font-size: 0.8rem; text-decoration: none;">
+              <i class="fas fa-external-link-alt"></i>
+            </a>
+          </div>
+          <iframe class="pdf-viewer-frame"
+                  src="./static/pdf/supplementary_material.pdf">
+          </iframe>
+        </div>
+        <div class="has-text-centered" style="margin-top: 1.5rem;">
+          <a href="./static/pdf/supplementary_material.pdf" class="external-link button is-normal is-rounded is-dark" target="_blank">
+            <span class="icon"><i class="fas fa-download"></i></span>
+            <span>Download Supplementary</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Footer ==================== -->
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link" href="https://github.com/guestcomputervision/PGSPN">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
