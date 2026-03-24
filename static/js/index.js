@@ -19,18 +19,38 @@ $(document).ready(function() {
       $(".navbar-menu").toggleClass("is-active");
     });
 
-    // Initialize carousels
-    var carouselOptions = {
-      slidesToScroll: 1,
-      slidesToShow: 1,
-      loop: true,
-      infinite: true,
-      autoplay: false,
-    };
+    // Initialize carousels only if library is loaded and elements exist
+    if (typeof bulmaCarousel !== 'undefined' && document.querySelector('.carousel')) {
+      bulmaCarousel.attach('.carousel', {
+        slidesToScroll: 1,
+        slidesToShow: 1,
+        loop: true,
+        infinite: true,
+        autoplay: false,
+      });
+    }
 
-    bulmaCarousel.attach('.carousel', carouselOptions);
+    if (typeof bulmaSlider !== 'undefined') {
+      bulmaSlider.attach();
+    }
 
-    bulmaSlider.attach();
+    // Tab switching
+    document.querySelectorAll('.tabs li[data-target]').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        var parent = this.closest('.tabs');
+        var panels = parent.nextElementSibling;
+
+        // Deactivate all tabs in this group
+        parent.querySelectorAll('li').forEach(function(t) { t.classList.remove('is-active'); });
+        // Deactivate all panels in this group
+        panels.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('is-active'); });
+
+        // Activate clicked tab and target panel
+        this.classList.add('is-active');
+        var target = this.getAttribute('data-target');
+        document.getElementById(target).classList.add('is-active');
+      });
+    });
 
     // Scroll-spy: highlight active nav link
     var sections = document.querySelectorAll('section[id]');

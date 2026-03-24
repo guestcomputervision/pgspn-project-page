@@ -278,16 +278,26 @@
           </p>
         </div>
 
-        <div id="transmission-carousel" class="carousel qual-carousel">
-          <div class="item">
-            <img src="./static/images/transmission_0.png" alt="Transmission visualization on FLSea-VI">
+        <!-- Tab switcher: Transmission -->
+        <div class="tabs is-centered is-boxed" style="margin-bottom: 0;">
+          <ul>
+            <li class="is-active" data-target="trans-vi"><a>FLSea-VI</a></li>
+            <li data-target="trans-stereo"><a>FLSea-Stereo</a></li>
+          </ul>
+        </div>
+        <div class="tab-content-panels">
+          <div id="trans-vi" class="tab-panel is-active">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/transmission_0.png" alt="Transmission visualization on FLSea-VI">
+            </div>
           </div>
-          <div class="item">
-            <img src="./static/images/transmission_3.png" alt="Transmission visualization on FLSea-Stereo">
+          <div id="trans-stereo" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/transmission_3.png" alt="Transmission visualization on FLSea-Stereo">
+            </div>
           </div>
         </div>
-        <p class="figure-caption has-text-centered" style="margin-top: 0.75rem;">
-          <strong>Transmission and restoration visualization</strong> on FLSea-VI and FLSea-Stereo.
+        <p class="figure-caption has-text-centered">
           Rows: sparse depth, ambient light, transmission (R/G/B), enhanced image, depth output.
         </p>
 
@@ -299,19 +309,33 @@
           </p>
         </div>
 
-        <div id="qualitative-carousel" class="carousel qual-carousel">
-          <div class="item">
-            <img src="./static/images/supp_flatiron.png" alt="Qualitative results on flatiron">
+        <!-- Tab switcher: Qualitative -->
+        <div class="tabs is-centered is-boxed" style="margin-bottom: 0;">
+          <ul>
+            <li class="is-active" data-target="qual-flatiron"><a>flatiron</a></li>
+            <li data-target="qual-crosspyramid"><a>cross_pyramid_loop</a></li>
+            <li data-target="qual-rockgarden"><a>rock_garden1</a></li>
+          </ul>
+        </div>
+        <div class="tab-content-panels">
+          <div id="qual-flatiron" class="tab-panel is-active">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/supp_flatiron.png" alt="Qualitative results on flatiron">
+            </div>
           </div>
-          <div class="item">
-            <img src="./static/images/supp_crosspyramid.png" alt="Qualitative results on cross_pyramid_loop">
+          <div id="qual-crosspyramid" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/supp_crosspyramid.png" alt="Qualitative results on cross_pyramid_loop">
+            </div>
           </div>
-          <div class="item">
-            <img src="./static/images/supp_rockgarden1.png" alt="Qualitative results on rock_garden1">
+          <div id="qual-rockgarden" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/supp_rockgarden1.png" alt="Qualitative results on rock_garden1">
+            </div>
           </div>
         </div>
-        <p class="figure-caption has-text-centered" style="margin-top: 0.75rem;">
-          <strong>Qualitative comparisons</strong> on flatiron, cross_pyramid_loop, and rock_garden1 under 9 sparsity conditions.
+        <p class="figure-caption has-text-centered">
+          9 sparsity conditions per sequence (Uniform 50&ndash;400, Bias 10&ndash;60%, SfM 10&ndash;100%).
         </p>
       </div>
     </div>

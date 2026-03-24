@@ -682,3 +682,28 @@ html {
 .bibtex-copy-btn:hover {
   background: #0a0a6e;
 }
+
+/* ==================== Tab Content Panels ==================== */
+.tab-content-panels .tab-panel {
+  display: none;
+}
+
+.tab-content-panels .tab-panel.is-active {
+  display: block;
+}
+
+.tabs.is-boxed li.is-active a {
+  background-color: #010042 !important;
+  color: #fff !important;
+  border-color: #010042 !important;
+}
+
+.tabs.is-boxed a {
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.tabs.is-boxed a:hover {
+  background-color: #eeeef8;
+}
