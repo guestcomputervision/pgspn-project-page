@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="PGSPN: Implementation Details">
+  <meta name="keywords" content="PGSPN, Depth Completion, Underwater, Physics-Guided">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PGSPN - Implementation Details</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700|Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/favicon.png">
+
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body class="has-navbar-fixed-top">
+
+<!-- ==================== Navigation Bar ==================== -->
+<nav class="navbar is-fixed-top pgspn-navbar" role="navigation" aria-label="main navigation">
+  <div class="container is-max-fullhd">
+    <div class="navbar-brand">
+      <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="pgspnNavbar">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+    <div id="pgspnNavbar" class="navbar-menu">
+      <div class="navbar-start">
+        <a class="navbar-item nav-link" href="./index.html">Main</a>
+        <a class="navbar-item nav-link is-active" href="./implementation.html">Implementation Details</a>
+        <a class="navbar-item nav-link" href="./analysis.html">Analysis &amp; Experiments</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== Page Header ==================== -->
+<section class="hero is-small is-bold is-primary">
+  <div class="hero-body">
+    <div class="container is-max-fullhd has-text-centered">
+      <h1 class="title is-3">Implementation Details</h1>
+      <p class="subtitle is-6" style="color: rgba(255,255,255,0.8);">Parameters, network architecture, and dataset configuration</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Parameters Setting ==================== -->
+<section class="section" id="parameters">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Parameters Setting</h2>
+        <div class="content-text">
+          <p>The table below lists all hyperparameters used in PGSPN. Values were determined empirically through validation set performance.</p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="pgspn-table">
+            <thead>
+              <tr><th>Parameter</th><th>Description</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+              <tr class="group-header"><td colspan="3">Training Configuration</td></tr>
+              <tr><td class="text-left">Optimizer</td><td class="text-left">Optimization algorithm</td><td>AdamW</td></tr>
+              <tr><td class="text-left">Weight decay</td><td class="text-left">L2 regularization coefficient</td><td>10<sup>&minus;2</sup></td></tr>
+              <tr><td class="text-left">$\beta_1, \beta_2$</td><td class="text-left">Adam momentum parameters</td><td>0.9, 0.999</td></tr>
+              <tr><td class="text-left">LR (Stage 1)</td><td class="text-left">Learning rate for transmission estimation</td><td>$2 \times 10^{-4}$</td></tr>
+              <tr><td class="text-left">Batch size (Stage 1)</td><td class="text-left">Batch size for transmission estimation</td><td>5</td></tr>
+              <tr><td class="text-left">Epochs (Stage 1)</td><td class="text-left">Training epochs for transmission estimation</td><td>16</td></tr>
+              <tr><td class="text-left">LR (Stage 2)</td><td class="text-left">Learning rate for depth completion</td><td>$3 \times 10^{-4}$</td></tr>
+              <tr><td class="text-left">Batch size (Stage 2)</td><td class="text-left">Batch size for depth completion</td><td>3</td></tr>
+              <tr><td class="text-left">Epochs (Stage 2)</td><td class="text-left">Training epochs for depth completion</td><td>8</td></tr>
+              <tr class="group-header"><td colspan="3">PGPS Module</td></tr>
+              <tr><td class="text-left">$\tau_{\text{rel}}$</td><td class="text-left">Relative threshold for homogeneous region detection</td><td>0.3</td></tr>
+              <tr><td class="text-left">$\lambda_{\text{PGPS}}$</td><td class="text-left">Decay rate controlling propagation suppression strength</td><td>1.2</td></tr>
+              <tr class="group-header"><td colspan="3">Loss Function Weights</td></tr>
+              <tr><td class="text-left">$\lambda_{\text{photo}}$</td><td class="text-left">Weight for photometric restoration loss</td><td>12.0</td></tr>
+              <tr><td class="text-left">$\lambda_{\text{geo}}$</td><td class="text-left">Weight for geometric regularization loss</td><td>25.0</td></tr>
+              <tr><td class="text-left">$\alpha$</td><td class="text-left">Balance between SSIM and $\ell_1$ loss in photometric loss</td><td>0.7</td></tr>
+              <tr><td class="text-left">$\gamma$</td><td class="text-left">Exponential weighting factor for multi-scale depth loss</td><td>0.7</td></tr>
+              <tr><td class="text-left">$N$</td><td class="text-left">Number of iterative refinement steps</td><td>3</td></tr>
+              <tr class="group-header"><td colspan="3">Network Architecture</td></tr>
+              <tr><td class="text-left">$K$</td><td class="text-left">Kernel size for deformable convolutional propagation</td><td>3</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Network Architecture ==================== -->
+<section class="section section-alt" id="architecture">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Network Architecture for Transmission Estimation</h2>
+        <div class="content-text">
+          <p>
+            For Stage 1 transmission estimation, we adapt TRUDepth with minimal modifications to predict per-channel transmission maps $\hat{\mathbf{T}}_c$ and ambient backscatter $\hat{\mathbf{B}}_c$. We preserve the entire original architecture&mdash;including the encoder-decoder, transformer encoder, patch embeddings, and regressor modules&mdash;modifying only two components:
+          </p>
+          <p>
+            <strong>(1) Multi-channel bin regression:</strong> We expand the MLP output dimension from $\mathbb{R}^{1 \times \text{bin\_nums}}$ to $\mathbb{R}^{3 \times \text{bin\_nums}}$, enabling independent bin width prediction for each color channel. This captures wavelength-dependent attenuation characteristics while preserving all other operations from AdaBins&mdash;bin edge computation, depth score generation via dot-product, and weighted combination for transmission estimation.
+          </p>
+          <p>
+            <strong>(2) Ambient light estimation:</strong> We add a single $1 \times 1$ convolutional layer that projects attention map features to 3-channel ambient light estimates $\hat{\mathbf{B}}_c \in \mathbb{R}^{3 \times H \times W}$, enabling photometric reconstruction.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/architecture.png" alt="Minimal modifications to TRUDepth for transmission estimation" style="max-width: 50%;">
+          <p class="figure-caption">
+            <strong>Minimal modifications to TRUDepth for transmission estimation.</strong>
+            (a) Overall architecture with inputs I (RGB) and D<sub>s</sub> (sparse depth), outputting per-channel transmission $\hat{\mathbf{T}}_c$ and ambient light $\hat{\mathbf{B}}_c$. (b) Revised regression mechanism. Non-revised components remain unchanged. Revised: MLP output expansion to $\mathbb{R}^{3 \times \text{bin\_nums}}$ for multi-channel bin widths (yellow), and added $1 \times 1$ conv layer for ambient light (dark green).
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Dataset Details ==================== -->
+<section class="section" id="dataset">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Dataset Details and Experiments Setup</h2>
+        <div class="content-text">
+          <p>
+            We train and evaluate on FLSea-Stereo and FLSea-VI, which provide real underwater sequences captured at 10 Hz. FLSea-Stereo contains stereo image pairs at 1280&times;720, while FLSea-VI provides monocular sequences at 968&times;608, both with corresponding metric depth. All images are resized to 960&times;576 and evaluated within a depth range of 0&ndash;25 m.
+          </p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="pgspn-table">
+            <thead>
+              <tr>
+                <th>Dataset</th>
+                <th colspan="3">FLSea-Stereo (Train/Test)</th>
+                <th colspan="6">FLSea-VI (Train/Test)</th>
+                <th colspan="2">SeaThru (Cross-val)</th>
+              </tr>
+              <tr>
+                <th>Sequence</th>
+                <th colspan="3">rock_garden1</th>
+                <th colspan="3">flatiron</th>
+                <th colspan="3">cross_pyramid_loop</th>
+                <th colspan="2">D3</th>
+              </tr>
+              <tr>
+                <th>Sampling Type</th>
+                <th>SfM</th><th>Bias</th><th>Uniform</th>
+                <th>SfM</th><th>Bias</th><th>Uniform</th>
+                <th>SfM</th><th>Bias</th><th>Uniform</th>
+                <th>Bias</th><th>Uniform</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-left">Feature Num (#)</td>
+                <td>1495</td><td>177</td><td>500</td>
+                <td>2747</td><td>177</td><td>500</td>
+                <td>2334</td><td>167</td><td>500</td>
+                <td>191</td><td>500</td>
+              </tr>
+              <tr>
+                <td class="text-left">OGR (%)</td>
+                <td>32.47</td><td>14.99</td><td>40.2</td>
+                <td>63.37</td><td>22.82</td><td>52.74</td>
+                <td>56.12</td><td>19.35</td><td>50.28</td>
+                <td>14.9</td><td>36.21</td>
+              </tr>
+              <tr>
+                <td class="text-left">Difficulty</td>
+                <td colspan="3">&starf;&starf;&starf;</td>
+                <td colspan="3">&starf;</td>
+                <td colspan="3">&starf;&starf;</td>
+                <td colspan="2">&starf;&starf;&starf;</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="content-text">
+          <p>Difficulty ratings are based on OGR under height-constrained biased sampling using a 32&times;32 grid: &starf;&starf;&starf; Hard (OGR &le; 15%), &starf;&starf; Medium (15% &lt; OGR &le; 20%), &starf; Easy (OGR &gt; 20%).</p>
+
+          <h3 class="subsection-title">Sparse Depth Configurations</h3>
+          <p>
+            <strong>Feature Matching:</strong> SIFT keypoints detected on calibrated stereo pairs, matched with Lowe's ratio test and cross-check verification, geometrically verified via essential matrix estimation with RANSAC. Includes reprojection error filtering, depth range constraints, and MAD-based outlier rejection.
+          </p>
+          <p>
+            <strong>SfM (Structure-from-Motion):</strong> 3D reconstruction is run on each sequence. Reconstructed 3D points are projected onto the image plane using the corresponding pose and intrinsics, and depth values are sampled from ground truth at projected locations.
+          </p>
+          <p>
+            <strong>Uniform Random Sampling:</strong> Given a fixed budget of $N$ samples, pixels are uniformly sampled at random from locations with available ground-truth depth.
+          </p>
+          <p>
+            <strong>Bias (Height-Constrained Sampling):</strong> Models sensors with a restricted field-of-view. Starting from a uniform random mask with $N{=}400$ samples, only points within a central band covering a specified percentage of the image height are retained:
+          </p>
+          <div class="math-block">
+            $$\frac{1-r}{2}H \leq y < \frac{1+r}{2}H$$
+          </div>
+          <p>
+            This produces vertically biased sparse depth that concentrates measurements in the central region while leaving upper and lower areas unobserved.
+          </p>
+
+          <h3 class="subsection-title">Train/Test Protocol</h3>
+          <p>We adopt a sequence-level protocol to prevent temporal leakage. Three sequences are reserved for testing (rock_garden1 from FLSea-Stereo, flatiron and cross_pyramid_loop from FLSea-VI), with the remaining 13 sequences as training data (~25k training, ~5k test images). Cross-validation on SeaThru D3 is performed without fine-tuning.</p>
+
+          <h3 class="subsection-title">Synthetic Open-Water Generation for DBI</h3>
+          <p>We identify the top 25% of image height as the candidate open-water region, detect the foreground boundary by finding the uppermost row with valid ground-truth depth for each column, then place a rectangular ROI of height $H_{\text{roi}}{=}60$ px immediately above this boundary. Boundary pixel pairs $(p_{\text{in}}, p_{\text{bd}})$ are sampled within a band of width $W_{\text{bd}}{=}5$ px along the foreground edge.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Footer ==================== -->
+<!-- <footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link" href="https://github.com/guestcomputervision/PGSPN">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+  </div>
+</footer> -->
+
+<script src="./static/js/index.js"></script>
+</body>
+</html>

@@ -25,11 +25,18 @@
 <!-- ==================== Navigation Bar ==================== -->
 <nav class="navbar is-fixed-top pgspn-navbar" role="navigation" aria-label="main navigation">
   <div class="container is-max-fullhd">
+    <div class="navbar-brand">
+      <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="pgspnNavbar">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
     <div id="pgspnNavbar" class="navbar-menu">
       <div class="navbar-start">
-        <a class="navbar-item nav-link" href="#abstract">Abstract</a>
-        <a class="navbar-item nav-link" href="#key-insights">Key Insights</a>
-        <a class="navbar-item nav-link" href="#supplementary">Supplementary</a>
+        <a class="navbar-item nav-link is-active" href="./index.html">Main</a>
+        <a class="navbar-item nav-link" href="./implementation.html">Implementation Details</a>
+        <a class="navbar-item nav-link" href="./analysis.html">Analysis &amp; Experiments</a>
       </div>
     </div>
   </div>
@@ -45,17 +52,18 @@
       <div style="margin-top: 1.25rem;">
         <div class="publication-links">
           <span class="link-block">
-            <a href="https://github.com/guestcomputervision/PGSPN" class="external-link button is-normal is-rounded is-dark" target="_blank">
+            <a class="external-link button is-normal is-rounded is-dark" target="_blank">
+            <!-- <a href="https://github.com/guestcomputervision/PGSPN" class="external-link button is-normal is-rounded is-dark" target="_blank"> -->
               <span class="icon"><i class="fab fa-github"></i></span>
-              <span>Code</span>
+              <span>Code (Coming Soon)</span>
             </a>
           </span>
-          <span class="link-block">
+          <!-- <span class="link-block">
             <a href="./static/pdf/supplementary_material.pdf" class="external-link button is-normal is-rounded is-dark" target="_blank">
               <span class="icon"><i class="fas fa-file-pdf"></i></span>
-              <span>Supplementary</span>
+              <span>Supplementary PDF</span>
             </a>
-          </span>
+          </span> -->
           <span class="link-block">
             <a class="external-link button is-normal is-rounded is-dark" target="_blank">
               <span class="icon"><i class="fas fa-file-pdf"></i></span>
@@ -89,7 +97,7 @@
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Depth completion has achieved remarkable progress in terrestrial environments. However, these environments predominantly assume uniformly distributed sparse depth across scenes. Unlike terrestrial scenarios, underwater environments present two critical challenges. First, sparse depth typically exhibits highly irregular or spatially biased distributions. Second, extensive regions without depth measurements, such as open water, exacerbate depth bleeding, erroneous propagation of depth values from supervised into unsupervised areas. To address these challenges, we propose PGSPN, to our knowledge, the first physics-guided underwater depth completion framework. Rather than relying solely on irregular sparse measurements, PGSPN leverages underwater optical physics to construct a sparsity-robust metric prior. Specifically, we estimate per-channel transmission maps from the input image and rescale them to metric scale, generating a physics-based prior that remains reliable even under extreme sparsity. Then, to prevent depth bleeding during refinement, we introduce attenuation-aware spatial propagation that reduces propagation weights for pixels with large depth discrepancies. Finally, experiments on FLSea-Stereo and FLSea-VI demonstrate state-of-the-art performance with superior robustness in handling irregular sparsity patterns.
+            Underwater robots require dense metric depth for mapping, navigation, and manipulation, yet practical sources such as Structure-from-Motion (SfM) and field-of-view-limited sensors provide only sparse, spatially biased measurements with frame-varying density. Existing depth completion methods assume uniformly distributed inputs and degrade severely under such irregular sparsity. Underwater scenes further aggravate this problem because expansive open-water regions lack ground-truth supervision, causing estimated depths to erroneously extend beyond object boundaries into empty space&mdash;a phenomenon we term <em>depth bleeding</em>. We propose <strong>PGSPN</strong>, a physics-guided depth completion framework that exploits underwater optical attenuation to construct a sparsity-robust metric depth prior from per-channel transmission maps. Our Physics-Guided Propagation Suppression (PGPS) module explicitly prevents depth bleeding by attenuating propagation across transmission-derived depth discrepancies. We additionally introduce the Depth Bleeding Index (DBI), a new metric for quantifying boundary preservation in open-water regions. Evaluated on real underwater datasets with sequence-level splits, cross-dataset generalization, and real sensor imagery, PGSPN reduces MAE by up to 47% over the best baseline while achieving the lowest DBI across all conditions.
           </p>
         </div>
       </div>
@@ -107,27 +115,27 @@
         <div class="highlight-card">
           <h3 class="title is-5">
             <span class="icon" style="color: #00d1b2;"><i class="fas fa-water"></i></span>
-            임시 제목 1
+            Irregular Sparsity in Underwater Environments
           </h3>
-          <p>임시 내용입니다. 추후 실제 내용으로 교체될 예정입니다.</p>
+          <p>Unlike terrestrial LiDAR which provides uniformly distributed depth, underwater sources (SfM, sonar) produce spatially biased, frame-varying sparse measurements. Large open-water regions lack any depth supervision, causing severe <em>depth bleeding</em> artifacts.</p>
         </div>
       </div>
       <div class="column is-4">
         <div class="highlight-card">
           <h3 class="title is-5">
             <span class="icon" style="color: #3273dc;"><i class="fas fa-layer-group"></i></span>
-            임시 제목 2
+            Physics-Guided Metric Prior
           </h3>
-          <p>임시 내용입니다. 추후 실제 내용으로 교체될 예정입니다.</p>
+          <p>We exploit the Beer&ndash;Lambert law: underwater light attenuation embeds depth-dependent photometric cues in RGB images. By estimating per-channel transmission maps and rescaling to metric scale, we obtain a dense, boundary-preserving depth prior independent of sparse input density.</p>
         </div>
       </div>
       <div class="column is-4">
         <div class="highlight-card">
           <h3 class="title is-5">
             <span class="icon" style="color: #ff3860;"><i class="fas fa-chart-line"></i></span>
-            임시 제목 3
+            Depth Bleeding Suppression
           </h3>
-          <p>임시 내용입니다. 추후 실제 내용으로 교체될 예정입니다.</p>
+          <p>Our PGPS module leverages the transmission-based prior to modulate spatial propagation weights&mdash;fully preserving propagation within homogeneous regions while exponentially suppressing it across depth discontinuities at open-water boundaries.</p>
         </div>
       </div>
     </div>
@@ -135,33 +143,28 @@
 </section>
 
 
-<!-- ==================== Supplementary ==================== -->
-<section class="section" id="supplementary">
+<!-- ==================== Page Navigation Cards ==================== -->
+<section class="section" id="pages">
   <div class="container is-max-fullhd">
-    <h2 class="title is-3 has-text-centered">Supplementary</h2>
+    <h2 class="title is-3 has-text-centered">Supplementary Materials</h2>
     <div class="columns is-centered" style="margin-top: 1.5rem;">
-      <div class="column is-four-fifths">
-        <div class="pdf-viewer-wrapper">
-          <div class="pdf-viewer-toolbar">
-            <div class="pdf-viewer-toolbar-dots">
-              <span></span><span></span><span></span>
-            </div>
-            <span class="pdf-viewer-toolbar-title">supplementary_material.pdf</span>
-            <a href="./static/pdf/supplementary_material.pdf" target="_blank"
-               style="color: #aaa; font-size: 0.8rem; text-decoration: none;">
-              <i class="fas fa-external-link-alt"></i>
-            </a>
-          </div>
-          <iframe class="pdf-viewer-frame"
-                  src="./static/pdf/supplementary_material.pdf">
-          </iframe>
-        </div>
-        <div class="has-text-centered" style="margin-top: 1.5rem;">
-          <a href="./static/pdf/supplementary_material.pdf" class="external-link button is-normal is-rounded is-dark" target="_blank">
-            <span class="icon"><i class="fas fa-download"></i></span>
-            <span>Download Supplementary</span>
-          </a>
-        </div>
+      <div class="column is-5">
+        <a class="dataset-card" href="./implementation.html">
+          <h3 class="title is-5" style="margin-bottom: 0.5rem;">
+            <span class="icon" style="color: #3273dc;"><i class="fas fa-cogs"></i></span>
+            Implementation Details
+          </h3>
+          <p>Parameters setting, network architecture for transmission estimation, dataset details, and experiment setup.</p>
+        </a>
+      </div>
+      <div class="column is-5">
+        <a class="dataset-card" href="./analysis.html">
+          <h3 class="title is-5" style="margin-bottom: 0.5rem;">
+            <span class="icon" style="color: #ff3860;"><i class="fas fa-flask"></i></span>
+            Additional Analysis &amp; Experiments
+          </h3>
+          <p>Mathematical derivation, extended quantitative results, computational analysis, turbidity impact, and qualitative comparisons.</p>
+        </a>
       </div>
     </div>
   </div>
@@ -169,7 +172,7 @@
 
 
 <!-- ==================== Footer ==================== -->
-<footer class="footer">
+<!-- <footer class="footer">
   <div class="container">
     <div class="content has-text-centered">
       <a class="icon-link" href="https://github.com/guestcomputervision/PGSPN">
@@ -177,7 +180,8 @@
       </a>
     </div>
   </div>
-</footer>
+</footer> -->
 
+<script src="./static/js/index.js"></script>
 </body>
 </html>

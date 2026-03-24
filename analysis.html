@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="PGSPN: Additional Analysis and Experiments">
+  <meta name="keywords" content="PGSPN, Depth Completion, Underwater, Physics-Guided">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PGSPN - Additional Analysis &amp; Experiments</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600,700|Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/favicon.png">
+
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body class="has-navbar-fixed-top">
+
+<!-- ==================== Navigation Bar ==================== -->
+<nav class="navbar is-fixed-top pgspn-navbar" role="navigation" aria-label="main navigation">
+  <div class="container is-max-fullhd">
+    <div class="navbar-brand">
+      <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="pgspnNavbar">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+    <div id="pgspnNavbar" class="navbar-menu">
+      <div class="navbar-start">
+        <a class="navbar-item nav-link" href="./index.html">Main</a>
+        <a class="navbar-item nav-link" href="./implementation.html">Implementation Details</a>
+        <a class="navbar-item nav-link is-active" href="./analysis.html">Analysis &amp; Experiments</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ==================== Page Header ==================== -->
+<section class="hero is-small is-bold is-primary">
+  <div class="hero-body">
+    <div class="container is-max-fullhd has-text-centered">
+      <h1 class="title is-3">Additional Analysis &amp; Experiments</h1>
+      <p class="subtitle is-6" style="color: rgba(255,255,255,0.8);">Mathematical derivation, extended results, and qualitative comparisons</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== From Ideal Transmission to Learned Surrogate ==================== -->
+<section class="section" id="derivation">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">From Ideal Transmission to Learned Surrogate</h2>
+
+        <div class="content-text">
+          <p>
+            Under the Beer&ndash;Lambert law, the physical transmission satisfies $\mathbf{T}_{\text{phys},c}(\mathbf{x}) = \exp(-\beta_c\,\mathbf{D}(\mathbf{x}))$, making $-\log \mathbf{T}_{\text{phys},c}$ a zero-intercept linear function of depth. However, real cameras introduce nonlinear distortions (gamma, tone mapping), breaking this ideal relation.
+          </p>
+          <p>
+            Following the multi-degradation imaging model, we parameterize the learned transmission as a power-law transform:
+          </p>
+          <div class="math-block">
+            $$\hat{\mathbf{T}}_c(\mathbf{x}) \approx A_c\,\mathbf{T}_{\text{phys},c}(\mathbf{x})^{\gamma_c} = A_c \exp\!\big(-\tilde{\beta}_c\,\mathbf{D}(\mathbf{x})\big)$$
+          </div>
+          <p>
+            where $A_c > 0$, $\gamma_c > 0$ absorb camera nonlinearities, and $\tilde{\beta}_c = \gamma_c \beta_c$. In the log-domain $s_c(\mathbf{x}) = -\log \hat{\mathbf{T}}_c(\mathbf{x})$:
+          </p>
+          <div class="math-block">
+            $$s_c(\mathbf{x}) = \underbrace{\tilde{\beta}_c}_{\alpha_c}\,\mathbf{D}(\mathbf{x}) \;+\; \underbrace{(-\log A_c)}_{c_{0,c}}$$
+          </div>
+          <p>
+            The log-surrogate and metric depth are related by an <strong>affine mapping</strong> (not zero-intercept). The ideal case $A_c{=}1, \gamma_c{=}1$ reduces to zero-intercept, but in practice both scale and offset are needed. Hence we calibrate via least-squares:
+          </p>
+          <div class="math-block">
+            $$\hat{d}(\mathbf{x}) = a_{c^*}^*\,s_{c^*}(\mathbf{x}) + b_{c^*}^*$$
+          </div>
+          <p>
+            where $c^*$ is the channel with minimum reconstruction error against sparse depth.
+          </p>
+        </div>
+
+        <!-- Ablation -->
+        <h3 class="subsection-title">Ablation: Affine vs. Scale-Only</h3>
+
+        <div class="table-wrapper">
+          <table class="pgspn-table">
+            <thead>
+              <tr>
+                <th rowspan="2">Method</th>
+                <th colspan="2">rock_garden1 (&starf;&starf;&starf;)</th>
+                <th colspan="2">flatiron (&starf;)</th>
+              </tr>
+              <tr>
+                <th>SfM 100%</th><th>Bias 60%</th>
+                <th>SfM 100%</th><th>Bias 60%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-left">Scale-only ($b{=}0$)</td>
+                <td>0.334</td><td>0.450</td>
+                <td>0.248</td><td>0.405</td>
+              </tr>
+              <tr>
+                <td class="text-left"><strong>Affine (ours)</strong></td>
+                <td class="rank-1">0.261 (&darr;21.8%)</td>
+                <td class="rank-1">0.386 (&darr;14.2%)</td>
+                <td class="rank-1">0.196 (&darr;20.8%)</td>
+                <td class="rank-1">0.222 (&darr;45.1%)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="content-text">
+          <p>
+            The affine variant consistently achieves 14&ndash;45% lower RMSE. The gain is largest under high sparsity (Bias 60%), where fewer calibration points make the offset correction more critical.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Extended Quantitative Results ==================== -->
+<section class="section section-alt" id="experiments">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Extended Quantitative Results</h2>
+
+        <!-- Cross-Dataset Validation -->
+        <h3 class="subsection-title">Cross-Dataset Validation on SeaThru D3</h3>
+        <div class="content-text">
+          <p>
+            We evaluate generalization on SeaThru D3 using our FLSea-trained model <em>without fine-tuning</em>. The performance gap over baselines widens as sparsity increases, confirming that the physics-guided prior generalizes across environments.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/cross_validation_graphs.png" alt="Cross-dataset quantitative validation on SeaThru D3">
+          <p class="figure-caption">
+            <strong>Cross-dataset validation on SeaThru D3.</strong>
+            (a) Uniform sampling (50&ndash;500 pts) and (b) Height-constrained sampling (10&ndash;100%). PGSPN maintains stable accuracy while baselines degrade sharply under extreme sparsity.
+          </p>
+        </div>
+
+        <!-- Results on cross_pyramid_loop -->
+        <h3 class="subsection-title">Results on cross_pyramid_loop (&starf;&starf;)</h3>
+
+        <div class="table-wrapper">
+          <table class="pgspn-table">
+            <thead>
+              <tr>
+                <th rowspan="2">Method</th>
+                <th colspan="3">SfM 100%</th>
+                <th colspan="3">Bias 60%</th>
+              </tr>
+              <tr>
+                <th>RMSE &darr;</th><th>$\delta_1$ &uarr;</th><th>DBI &darr;</th>
+                <th>RMSE &darr;</th><th>$\delta_1$ &uarr;</th><th>DBI &darr;</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="text-left">PENet</td><td>0.160</td><td>0.997</td><td>0.441</td><td>0.314</td><td>0.961</td><td>0.401</td></tr>
+              <tr><td class="text-left">DySPN</td><td class="rank-1">0.047</td><td>0.999</td><td class="rank-2">0.201</td><td>0.326</td><td>0.885</td><td class="rank-2">0.193</td></tr>
+              <tr><td class="text-left">LRRU</td><td>0.113</td><td>0.998</td><td>0.621</td><td>0.342</td><td>0.939</td><td>0.555</td></tr>
+              <tr><td class="text-left">MSPN</td><td>0.174</td><td>0.992</td><td>0.552</td><td>0.633</td><td>0.842</td><td>0.518</td></tr>
+              <tr><td class="text-left">BP-Net</td><td class="rank-2">0.053</td><td class="rank-1">0.999</td><td>0.448</td><td>0.304</td><td>0.936</td><td>0.406</td></tr>
+              <tr><td class="text-left"><strong>PGSPN-prior</strong></td><td>0.121</td><td>0.993</td><td class="rank-1">0.181</td><td class="rank-2">0.166</td><td class="rank-2">0.989</td><td class="rank-1">0.175</td></tr>
+              <tr><td class="text-left"><strong>PGSPN</strong></td><td class="rank-3">0.095</td><td class="rank-1">0.999</td><td>0.185</td><td class="rank-1">0.141</td><td class="rank-1">0.991</td><td>0.180</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="content-text">
+          <p>
+            PGSPN achieves the best DBI across both sparsity conditions, confirming strongest bleeding suppression regardless of whether overall RMSE is optimal. Under Bias 60%, PGSPN also leads in RMSE (0.141 m) and $\delta_1$ (0.991).
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Computational & Turbidity ==================== -->
+<section class="section" id="analysis-section">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Efficiency and Turbidity Analysis</h2>
+
+        <!-- Computational Cost -->
+        <h3 class="subsection-title">Computational Cost</h3>
+        <div class="content-text">
+          <p>
+            PGPS adds negligible cost (0.6 ms desktop, 4.2 ms AGX Orin) for 18.2% DBI reduction. With TensorRT (FP16), PGSPN achieves <strong>8.1 Hz</strong> on Jetson AGX Orin&mdash;sufficient for keyframe-based underwater mapping at 0.5&ndash;2 m/s.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/computational_cost.png" alt="Computational cost analysis" style="max-width: 60%;">
+          <p class="figure-caption">
+            <strong>Computational cost analysis.</strong>
+            (a) Per-component inference time and parameters on RTX 3090 Ti and AGX Orin (640&times;384).
+            (b) Progressive optimization on AGX Orin: FP32 &rarr; TensorRT FP16 (8.1 Hz).
+          </p>
+        </div>
+
+        <!-- Turbidity -->
+        <h3 class="subsection-title">Impact of Water Turbidity</h3>
+        <div class="content-text">
+          <p>
+            Evaluated on Joint-ID with Jerlov water types (5C&ndash;I). PGSPN's advantage is strongest under high turbidity where photometric cues are rich, and narrows in clearer water&mdash;but never falls behind baselines. Reduced turbidity diminishes our advantage without introducing disadvantage.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/turbidity_analysis.png" alt="Impact of water turbidity" style="max-width: 42%;">
+          <p class="figure-caption">
+            <strong>Turbidity impact.</strong>
+            RMSE across Jerlov water types (5C: highly turbid &rarr; I: near-clear). PGSPN leads under turbid conditions and remains competitive in clear water.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Qualitative Results ==================== -->
+<section class="section section-alt" id="qualitative">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Additional Qualitative Results</h2>
+
+        <!-- PGPS Ablation -->
+        <h3 class="subsection-title">PGPS Ablation</h3>
+        <div class="content-text">
+          <p>
+            Without PGPS, depth bleeds into open-water regions. With PGPS, sharp boundaries are preserved while maintaining smooth intra-object depth.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/ablation_pgps.png" alt="Qualitative PGPS evaluation" style="max-width: 52%;">
+          <p class="figure-caption">
+            <strong>PGPS ablation on FLSea (SfM 100%).</strong>
+            Left: RGB. Middle: w/o PGPS (bleeding). Right: w/ PGPS (suppressed). Blue boxes: zoomed regions.
+          </p>
+        </div>
+
+        <!-- Transmission Visualization -->
+        <h3 class="subsection-title">Transmission and Restoration</h3>
+        <div class="content-text">
+          <p>
+            Per-channel transmission maps remain consistent despite extreme sparsity variation (Bias 20% to Uniform 400 pts), confirming that photometric supervision captures global attenuation structure independently of measurement density.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/transmission_0.png" alt="Transmission visualization on FLSea-VI">
+          <p class="figure-caption">
+            <strong>Transmission and restoration on FLSea-VI.</strong>
+            Rows: sparse depth, ambient light, transmission (R/G/B), enhanced image, depth output. Consistent across sparsity levels.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/transmission_3.png" alt="Transmission visualization on FLSea-Stereo">
+          <p class="figure-caption">
+            <strong>Transmission and restoration on FLSea-Stereo.</strong>
+            Same layout as above. Results remain stable across varying sparse depth patterns.
+          </p>
+        </div>
+
+        <!-- Qualitative Comparisons -->
+        <h3 class="subsection-title">Depth Completion Comparisons</h3>
+        <div class="content-text">
+          <p>
+            Comparisons across all three test sequences under varying sparsity. Baselines exhibit depth bleeding or catastrophic failure under biased inputs; PGSPN maintains sharp boundaries throughout.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/supp_flatiron.png" alt="Qualitative results on flatiron">
+          <p class="figure-caption"><strong>flatiron</strong> &mdash; 9 sparsity conditions (Uniform 50&ndash;400, Bias 10&ndash;60%, SfM 10&ndash;100%).</p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/supp_crosspyramid.png" alt="Qualitative results on cross_pyramid_loop">
+          <p class="figure-caption"><strong>cross_pyramid_loop</strong> &mdash; same 9 conditions.</p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/supp_rockgarden1.png" alt="Qualitative results on rock_garden1">
+          <p class="figure-caption"><strong>rock_garden1</strong> &mdash; same 9 conditions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Footer ==================== -->
+<!-- <footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link" href="https://github.com/guestcomputervision/PGSPN">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+  </div>
+</footer> -->
+
+<script src="./static/js/index.js"></script>
+</body>
+</html>
