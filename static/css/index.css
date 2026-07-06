@@ -458,6 +458,11 @@ figure.image img {
   background-image: linear-gradient(141deg, #000020 0%, #010042 71%, #0a0a6e 100%) !important;
 }
 
+/* ==================== Chapter Divider Banner ==================== */
+.chapter-hero {
+  border-top: 3px solid #ffc800;
+}
+
 /* ==================== Scroll offset for fixed navbar ==================== */
 html {
   scroll-padding-top: 4rem;
@@ -570,6 +575,15 @@ html {
 .rank-1 { font-weight: 700; color: #ff3860; }
 .rank-2 { font-weight: 600; color: #3273dc; }
 .rank-3 { font-weight: 600; color: #00d1b2; }
+
+/* Vertical group separators (aligned column-group dividers) */
+.pgspn-table thead th.csep {
+  border-left: 2px solid rgba(255, 255, 255, 0.30);
+}
+
+.pgspn-table tbody td.csep {
+  border-left: 2px solid #b3bad8;
+}
 
 /* ==================== Figure Containers ==================== */
 .figure-container {
