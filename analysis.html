@@ -471,7 +471,7 @@
         <h3 class="subsection-title">Impact of Water Turbidity</h3>
         <div class="content-text">
           <p>
-            Our framework leverages optical attenuation as a depth cue&mdash;so how does performance vary with water clarity? We evaluate on the Joint-ID synthetic dataset, which provides controlled turbidity via Jerlov water types from 5C (highly turbid) to I (near-clear) with corresponding attenuation coefficients $(\beta_r, \beta_g, \beta_b)$. PGSPN's advantage is strongest under high turbidity (types 5C&ndash;1C), where wavelength-dependent attenuation produces rich photometric cues for the transmission network. As turbidity decreases toward clear water (types IB&ndash;I), the attenuation signal weakens and the gap narrows&mdash;but PGSPN never falls behind: it remains competitive with the best baselines (DySPN, TWISE), because the depth completion backbone (LRRU + PGPS) retains effectiveness regardless of the photometric prior's informativeness. Reduced turbidity diminishes our <em>advantage</em> without introducing any <em>disadvantage</em>, making PGSPN well-suited for the turbid conditions common in real underwater operations.
+            Our framework leverages optical attenuation as a depth cue&mdash;so how does performance vary with water clarity? We evaluate on the Joint-ID synthetic dataset, which provides controlled turbidity via Jerlov water types from 5C (highly turbid) to I (near-clear) with corresponding attenuation coefficients $(\beta_r, \beta_g, \beta_b)$. PGSPN's advantage is strongest under high turbidity (types 5C&ndash;1C), where wavelength-dependent attenuation produces rich photometric cues for the transmission network. As turbidity decreases toward clear water (types IB&ndash;I), the attenuation signal weakens and the gap narrows&mdash;but PGSPN never falls behind: it remains competitive with the best baselines (DySPN, TWISE), because the depth completion backbone retains effectiveness regardless of the photometric prior's informativeness. Reduced turbidity diminishes our <em>advantage</em> without introducing any <em>disadvantage</em>, making PGSPN well-suited for the turbid conditions common in real underwater operations.
           </p>
         </div>
 
@@ -497,7 +497,7 @@
 
         <div class="content-text">
           <p>
-            Complementing the limitation analysis in the main paper (Sec. V-E), we examine robustness aspects that could not be covered there: behavior under <em>real sensor noise</em>, an <em>optional strategy</em> for rejecting gross outliers in the sparse depth used for affine calibration, and dependence on the <em>quality of the photometric reference images</em>.
+            Complementing the limitation analysis in the main paper (Sec. V-E), we examine two robustness aspects that could not be covered there: behavior under <em>real sensor noise</em>, and an <em>optional strategy</em> for rejecting gross outliers in the sparse depth used for affine calibration.
           </p>
         </div>
 
@@ -521,19 +521,10 @@
         <h3 class="subsection-title">Additional Strategy: Robust Rejection of Sparse Depth Outliers</h3>
         <div class="content-text">
           <p>
-            PGSPN calibrates its transmission-derived pseudo-depth to metric scale by fitting a per-channel affine map $D_{\text{prior}} = s\,\tilde{D}_c + b$ to the sparse measurements via least squares (Eqs. (6)&ndash;(9) of the main paper; see the <a href="#derivation">surrogate derivation</a> above). The main-paper experiments sample sparse depth from ground truth to isolate sparsity patterns from sensor noise, so gross outliers do not arise there and the plain least-squares fit suffices. In real-sensor deployment, however, the sparse depth from stereo triangulation, SfM, or sonar can carry <em>gross outliers</em>&mdash;feature mismatches, specular reflections, multi-path returns&mdash;and because ordinary least squares (OLS) minimizes <em>squared</em> residuals, even a handful can dominate the objective and skew $s$ and $b$ globally, corrupting the <em>entire</em> dense prior rather than a few pixels. Below we explore an <em>optional</em> robust-calibration strategy that could be plugged into this stage for such conditions&mdash;it is <strong>not</strong> part of the main-paper pipeline.
+            PGSPN calibrates its transmission-derived pseudo-depth to metric scale by least-squares fitting a per-channel affine map to the sparse measurements (Eqs. (6)&ndash;(9) of the main paper). Because the main-paper experiments sample sparse depth from ground truth, gross outliers do not arise and the plain least-squares fit suffices. In real-sensor deployment, however, stereo, SfM, or sonar measurements can carry <em>gross outliers</em>, and since least squares minimizes <em>squared</em> residuals, even a handful can skew the global scale and offset and corrupt the entire dense prior. For such conditions one <em>could</em> enable an optional robust-calibration step&mdash;a toggleable component in our implementation, <strong>off by default</strong> and <strong>not</strong> part of the main-paper pipeline.
           </p>
           <p>
-            <strong>An optional robust fit.</strong> One effective option is to replace plain OLS with an iteratively reweighted, median-based robust fit (a toggleable component in our implementation, off by default). Starting from the OLS estimate, each iteration would compute the residuals $r(x) = \big(s\,\tilde{D}_c(x) + b\big) - D_s(x)$ over the valid sparse pixels and derive a robust spread from their median absolute deviation (MAD):
-          </p>
-          <div class="math-block">
-            $$\sigma = \max\!\left(1.4826\,\operatorname{MAD}(r),\; 0.05\,\text{m}\right), \qquad x \text{ is an inlier} \iff \bigl| r(x) - \operatorname{median}(r) \bigr| \le \tau\,\sigma.$$
-          </div>
-          <p>
-            Centering on the <em>median</em> rather than the mean is what makes the test robust; the constant $1.4826$ rescales the MAD to a Gaussian-consistent standard deviation. Points outside the band would be discarded and the affine map re-fit on the survivors, repeating a few times (we use threshold $\tau = 3$ in the sweep below). Two design choices would keep such a scheme stable under underwater sparsity: (i)&nbsp;a <strong>MAD floor</strong> of $0.05$&nbsp;m prevents the band from collapsing to zero when a clean inlier majority drives the MAD toward zero&mdash;without it, obvious gross outliers would fall <em>inside</em> a vanishingly narrow band and escape rejection; and (ii)&nbsp;a set of <strong>safety guards</strong> that halt the loop when no point lies outside the band (converged), when too few inliers remain, when the survivors lose their spread in $\tilde{D}_c$, or when the fit stops changing&mdash;so aggressive rejection never collapses the calibration on already-scarce inputs. The rejected pixels can be exposed as a mask for inspection at inference.
-          </p>
-          <p>
-            <strong>How the threshold would behave.</strong> To characterize the strategy, the figure sweeps the rejection threshold $\tau$ under three synthetic outlier ratios (5%, 10%, 15%), tracking both how well the flagged points recover the injected outliers (F1) and the resulting depth accuracy (RMSE). Outlier-detection F1 is highest at tight thresholds and falls off as $\tau$ grows and the band begins to admit true outliers, with the decline steepening at higher outlier ratios. Final RMSE, by contrast, stays low and nearly flat across a broad range of $\tau$&mdash;the completed depth is largely insensitive to the exact threshold&mdash;and rises only when $\tau$ becomes so tight that genuine inliers are rejected and the fit destabilizes. A value of $\tau = 3$ sits in this stable regime while still removing the bulk of gross outliers; the error maps (right, 15% outliers) show the metric structure recovered with rejection versus a globally skewed calibration without it.
+            <strong>An optional robust fit.</strong> Starting from the least-squares estimate, the step would iteratively reject outliers with a median-absolute-deviation (MAD) criterion: keep sparse points whose residual lies within $\tau$ robust standard deviations of the <em>median</em> residual (a small MAD floor prevents the inlier band from collapsing), then re-fit the affine map on the survivors. The figure sweeps the threshold $\tau$ under 5% / 10% / 15% synthetic outlier ratios: outlier-detection F1 peaks at tighter thresholds, while the final depth RMSE stays low and nearly flat across a wide range of $\tau$&mdash;so the completed depth is largely insensitive to the exact threshold. We use $\tau = 1.0$, which removes the bulk of gross outliers while staying in this stable regime. Because the MAD test assumes an inlier majority, it weakens under very high or spatially clustered outlier fractions; robustly handling severe, structured measurement noise thus remains future work, consistent with the sensor-noise limitation above.
           </p>
         </div>
 
@@ -545,19 +536,6 @@
           </p>
         </div>
 
-        <div class="content-text">
-          <p>
-            <strong>Limitation.</strong> Were such a scheme adopted, a few caveats would apply. Because F1 favors a tight band while RMSE is robust across a wide one, no single global $\tau$ is simultaneously optimal for every outlier ratio&mdash;the F1-optimal threshold tightens as the outlier fraction grows, so a fixed $\tau$ would be a deliberate compromise. The MAD test also assumes an inlier majority: under very high outlier fractions, or spatially clustered rather than randomly scattered outliers, the median/MAD estimates are themselves biased and rejection weakens. And because the safety guards suppress rejection once too few points remain, some residual outliers could survive under extreme sparsity. Robustly handling severe, structured measurement noise (multi-path returns, gross triangulation failures) therefore remains future work, consistent with the sensor-noise limitation noted above and in the main paper.
-          </p>
-        </div>
-
-        <!-- Reference robustness -->
-        <h3 class="subsection-title">Robustness to Photometric Reference Image Quality</h3>
-        <div class="content-text">
-          <p>
-            Stage 1 photometric supervision relies on haze-free reference images generated by existing restoration methods (SyReANet, Sea-Thru). Does their quality critically affect performance? Two observations suggest robustness: (1) the estimated per-channel transmission maps remain remarkably consistent across extreme sparse-input variations (Bias 20% to Uniform 400 points&mdash;see the <a href="#qualitative">transmission visualizations</a> below), indicating the photometric loss captures the <em>global attenuation structure</em> of the scene rather than fine-grained pixel-level fidelity of the references; and (2) swapping the restoration network among SyReANet, Trident, and Joint-ID yields nearly identical results (Fig. 13(b) of the main paper). Moderate inaccuracies such as residual color cast or imperfect dehazing do not alter the learned transmission geometry, whose dominant signal&mdash;exponential decay with depth&mdash;is robust to such perturbations. Systematic ablation with intentionally degraded references remains future work.
-          </p>
-        </div>
       </div>
     </div>
   </div>
@@ -588,7 +566,7 @@
         </div>
 
         <!-- PGPS Ablation -->
-        <h3 class="subsection-title">PGPS Qualitative Ablation</h3>
+        <h3 class="subsection-title">Additional PGPS Qualitative Ablation</h3>
         <div class="content-text">
           <p>
             Without PGPS, erroneous depth propagates into open-water regions, creating visible artifacts at object boundaries. With PGPS, bleeding is prevented while smooth depth within objects is maintained.
