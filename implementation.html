@@ -69,7 +69,7 @@
       <div class="column is-four-fifths">
         <h2 class="title is-3">Parameters Setting</h2>
         <div class="content-text">
-          <p>The table below lists all hyperparameters used in PGSPN. Values were determined empirically through validation set performance.</p>
+          <p>The table below lists all hyperparameters used in PGSPN and its baselines (training configuration is described in Sec. V-A of the main paper). Values were determined empirically through validation set performance.</p>
         </div>
 
         <div class="table-wrapper">
@@ -116,7 +116,7 @@
         <h2 class="title is-3">Network Architecture for Transmission Estimation</h2>
         <div class="content-text">
           <p>
-            For Stage 1 transmission estimation, we adapt TRUDepth with minimal modifications to predict per-channel transmission maps $\hat{\mathbf{T}}_c$ and ambient backscatter $\hat{\mathbf{B}}_c$. We preserve the entire original architecture&mdash;including the encoder-decoder, transformer encoder, patch embeddings, and regressor modules&mdash;modifying only two components:
+            For Stage 1 transmission estimation, we adapt AdaBins with minimal modifications to predict per-channel transmission maps $\hat{\mathbf{T}}_c$ and ambient backscatter $\hat{\mathbf{B}}_c$. We preserve the entire original architecture&mdash;including the encoder-decoder, transformer encoder, patch embeddings, and regressor modules&mdash;modifying only two components:
           </p>
           <p>
             <strong>(1) Multi-channel bin regression:</strong> We expand the MLP output dimension from $\mathbb{R}^{1 \times \text{bin\_nums}}$ to $\mathbb{R}^{3 \times \text{bin\_nums}}$, enabling independent bin width prediction for each color channel. This captures wavelength-dependent attenuation characteristics while preserving all other operations from AdaBins&mdash;bin edge computation, depth score generation via dot-product, and weighted combination for transmission estimation.
@@ -127,9 +127,9 @@
         </div>
 
         <div class="figure-container">
-          <img src="./static/images/architecture.png" alt="Minimal modifications to TRUDepth for transmission estimation" style="max-width: 50%;">
+          <img src="./static/images/architecture.png" alt="Minimal modifications to AdaBins for transmission estimation" style="max-width: 50%;">
           <p class="figure-caption">
-            <strong>Minimal modifications to TRUDepth for transmission estimation.</strong>
+            <strong>Minimal modifications to AdaBins for transmission estimation.</strong>
             (a) Overall architecture with inputs I (RGB) and D<sub>s</sub> (sparse depth), outputting per-channel transmission $\hat{\mathbf{T}}_c$ and ambient light $\hat{\mathbf{B}}_c$. (b) Revised regression mechanism. Non-revised components remain unchanged. Revised: MLP output expansion to $\mathbb{R}^{3 \times \text{bin\_nums}}$ for multi-channel bin widths (yellow), and added $1 \times 1$ conv layer for ambient light (dark green).
           </p>
         </div>
@@ -147,7 +147,7 @@
         <h2 class="title is-3">Dataset Details and Experiments Setup</h2>
         <div class="content-text">
           <p>
-            We train and evaluate on FLSea-Stereo and FLSea-VI, which provide real underwater sequences captured at 10 Hz. FLSea-Stereo contains stereo image pairs at 1280&times;720, while FLSea-VI provides monocular sequences at 968&times;608, both with corresponding metric depth. All images are resized to 960&times;576 and evaluated within a depth range of 0&ndash;25 m.
+            We train and evaluate on FLSea-Stereo and FLSea-VI, which provide real underwater sequences captured at 10 Hz. FLSea-Stereo contains stereo image pairs at 1280&times;720, while FLSea-VI provides monocular sequences at 968&times;608, both with corresponding metric depth. All images are resized to 960&times;576 and evaluated within a depth range of 0&ndash;25 m, where underwater optical cues remain informative and typical degradations such as turbidity and caustics are present.
           </p>
         </div>
 
@@ -206,13 +206,13 @@
 
           <h3 class="subsection-title">Sparse Depth Configurations</h3>
           <p>
-            <strong>Feature Matching:</strong> SIFT keypoints detected on calibrated stereo pairs, matched with Lowe's ratio test and cross-check verification, geometrically verified via essential matrix estimation with RANSAC. Includes reprojection error filtering, depth range constraints, and MAD-based outlier rejection.
+            <strong>Feature Matching (FM):</strong> To evaluate under practical deployment conditions, sparse depth is obtained from stereo feature matching on rock_garden1, which provides calibrated stereo pairs. SIFT keypoints are detected in both views after undistortion, matched with Lowe's ratio test and cross-check verification, and geometrically verified via essential matrix estimation with RANSAC. Inlier correspondences are triangulated and scaled to metric depth using the known stereo baseline, followed by reprojection error filtering, depth range constraints, and MAD-based outlier rejection&mdash;so the resulting measurements contain only triangulation-level noise without gross outliers. Unlike the other three configurations, the number of valid points varies substantially across frames depending on scene texture and viewing geometry.
           </p>
           <p>
-            <strong>SfM (Structure-from-Motion):</strong> 3D reconstruction is run on each sequence. Reconstructed 3D points are projected onto the image plane using the corresponding pose and intrinsics, and depth values are sampled from ground truth at projected locations.
+            <strong>SfM (Structure-from-Motion):</strong> To emulate sparse depth from multi-view reconstruction, we run COLMAP on each sequence. For each evaluation frame, the reconstructed 3D points are projected onto the image plane using the corresponding pose and intrinsics to determine the measurement locations, and the corresponding metric depth at these projected locations forms the sparse input; pixels without a valid projection are treated as missing.
           </p>
           <p>
-            <strong>Uniform Random Sampling:</strong> Given a fixed budget of $N$ samples, pixels are uniformly sampled at random from locations with available ground-truth depth.
+            <strong>Uniform Random Sampling:</strong> Given a fixed budget of $N$ samples, pixels are uniformly sampled at random from locations with valid metric depth.
           </p>
           <p>
             <strong>Bias (Height-Constrained Sampling):</strong> Models sensors with a restricted field-of-view. Starting from a uniform random mask with $N{=}400$ samples, only points within a central band covering a specified percentage of the image height are retained:
@@ -225,10 +225,10 @@
           </p>
 
           <h3 class="subsection-title">Train/Test Protocol</h3>
-          <p>We adopt a sequence-level protocol to prevent temporal leakage. Three sequences are reserved for testing (rock_garden1 from FLSea-Stereo, flatiron and cross_pyramid_loop from FLSea-VI), with the remaining 13 sequences as training data (~25k training, ~5k test images). Cross-validation on SeaThru D3 is performed without fine-tuning.</p>
+          <p>We adopt a sequence-level protocol to prevent temporal leakage. Three sequences are reserved entirely for testing (rock_garden1 from FLSea-Stereo, flatiron and cross_pyramid_loop from FLSea-VI), with the remaining 13 sequences as training data: canyon1, canyon2, rock_garden2 from FLSea-Stereo, and horse_canyon, tiny_canyon, u_canyon, big_dice_loop, coral_table_loop, dice_path, landward_path, northeast_path, pier_path, sub_pier from FLSea-VI (~25k training, ~5k test images). The different resolutions and feature distributions across these datasets enable comprehensive evaluation under diverse underwater conditions, from feature-sparse to feature-rich environments. Cross-validation on SeaThru D3 is performed without fine-tuning.</p>
 
           <h3 class="subsection-title">Synthetic Open-Water Generation for DBI</h3>
-          <p>We identify the top 25% of image height as the candidate open-water region, detect the foreground boundary by finding the uppermost row with valid ground-truth depth for each column, then place a rectangular ROI of height $H_{\text{roi}}{=}60$ px immediately above this boundary. Boundary pixel pairs $(p_{\text{in}}, p_{\text{bd}})$ are sampled within a band of width $W_{\text{bd}}{=}5$ px along the foreground edge.</p>
+          <p>We identify the top 25% of image height as the candidate open-water region, detect the foreground boundary by finding the uppermost row with valid ground-truth depth for each column, then place a rectangular ROI of height $H_{\text{roi}}{=}60$ px immediately above this boundary. Boundary pixel pairs $(p_{\text{in}}, p_{\text{bd}})$ are sampled within a band of width $W_{\text{bd}}{=}5$ px along the foreground edge, with the interior pixel $p_{\text{in}}$ selected as the nearest pixel within the ROI to each boundary pixel $p_{\text{bd}}$. This synthetic setup enables controlled evaluation of bleeding artifacts without requiring ground-truth depth in open-water regions, which is inherently unavailable. The full DBI definition, reliability analysis (correlation with real open-water regions), qualitative examples, and sensitivity studies are provided in the <a href="./analysis.html#dbi">Depth Bleeding Index section</a> of the analysis page.</p>
         </div>
       </div>
     </div>

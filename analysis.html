@@ -56,7 +56,31 @@
   <div class="hero-body">
     <div class="container is-max-fullhd has-text-centered">
       <h1 class="title is-3">Additional Analysis &amp; Experiments</h1>
-      <p class="subtitle is-6" style="color: rgba(255,255,255,0.8);">Mathematical derivation, extended results, and qualitative comparisons</p>
+      <p class="subtitle is-6" style="color: rgba(255,255,255,0.8);">Mathematical derivation, extended results, ablations, robustness studies, and qualitative comparisons</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Table of Contents ==================== -->
+<section class="section" id="toc" style="padding-bottom: 0.5rem;">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <div class="content-text" style="background: #f6f8fa; border-radius: 8px; padding: 1.25rem 1.5rem;">
+          <p style="margin-bottom: 0;">
+            <strong>On this page:</strong>
+            <a href="#derivation">Transmission Surrogate Derivation</a> &middot;
+            <a href="#sparse-analysis">Sparse Depth Distribution Analysis</a> &middot;
+            <a href="#dbi">Depth Bleeding Index</a> &middot;
+            <a href="#experiments">Extended Quantitative Results</a> &middot;
+            <a href="#framework">Framework-Level Contributions</a> &middot;
+            <a href="#analysis-section">Efficiency &amp; Turbidity</a> &middot;
+            <a href="#limitations">Robustness Analysis</a> &middot;
+            <a href="#qualitative">Qualitative Results</a>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -71,33 +95,110 @@
 
         <div class="content-text">
           <p>
-            Under the Beer&ndash;Lambert law, the physical transmission satisfies $\mathbf{T}_{\text{phys},c}(\mathbf{x}) = \exp(-\beta_c\,\mathbf{D}(\mathbf{x}))$, making $-\log \mathbf{T}_{\text{phys},c}$ a zero-intercept linear function of depth. However, real cameras introduce nonlinear distortions (gamma, tone mapping), breaking this ideal relation.
+            PGSPN converts learned per-channel transmission maps into a metric-scale depth prior via an <strong>affine</strong> mapping in the log-domain (Eqs. (6)&ndash;(9) of the main paper). This section provides the complete derivation of why an affine mapping&mdash;with both scale <em>and</em> offset&mdash;is the physically correct choice, rather than the zero-intercept scaling that the ideal Beer&ndash;Lambert law would suggest.
           </p>
+        </div>
+
+        <!-- 1. Ideal law and its breakdown -->
+        <h3 class="subsection-title">Step 1: The Ideal Beer&ndash;Lambert Relation and Why It Breaks</h3>
+        <div class="content-text">
           <p>
-            Following the multi-degradation imaging model, we parameterize the learned transmission as a power-law transform:
-          </p>
-          <div class="math-block">
-            $$\hat{\mathbf{T}}_c(\mathbf{x}) \approx A_c\,\mathbf{T}_{\text{phys},c}(\mathbf{x})^{\gamma_c} = A_c \exp\!\big(-\tilde{\beta}_c\,\mathbf{D}(\mathbf{x})\big)$$
-          </div>
-          <p>
-            where $A_c > 0$, $\gamma_c > 0$ absorb camera nonlinearities, and $\tilde{\beta}_c = \gamma_c \beta_c$. In the log-domain $s_c(\mathbf{x}) = -\log \hat{\mathbf{T}}_c(\mathbf{x})$:
-          </p>
-          <div class="math-block">
-            $$s_c(\mathbf{x}) = \underbrace{\tilde{\beta}_c}_{\alpha_c}\,\mathbf{D}(\mathbf{x}) \;+\; \underbrace{(-\log A_c)}_{c_{0,c}}$$
-          </div>
-          <p>
-            The log-surrogate and metric depth are related by an <strong>affine mapping</strong> (not zero-intercept). The ideal case $A_c{=}1, \gamma_c{=}1$ reduces to zero-intercept, but in practice both scale and offset are needed. Hence we calibrate via least-squares:
+            Under the standard Beer&ndash;Lambert law, the physical transmission $\mathbf{T}_{\text{phys},c}(\mathbf{x})$ along channel $c$ and the metric depth $\mathbf{D}(\mathbf{x})$ satisfy
           </p>
           <div class="math-block">
-            $$\hat{d}(\mathbf{x}) = a_{c^*}^*\,s_{c^*}(\mathbf{x}) + b_{c^*}^*$$
+            $$\mathbf{T}_{\text{phys},c}(\mathbf{x}) = \exp\!\big(-\beta_c \mathbf{D}(\mathbf{x})\big), \qquad \log \mathbf{T}_{\text{phys},c}(\mathbf{x}) = -\beta_c \mathbf{D}(\mathbf{x}). \tag{S1}$$
           </div>
           <p>
-            where $c^*$ is the channel with minimum reconstruction error against sparse depth.
+            In this ideal model, $-\log \mathbf{T}_{\text{phys},c}(\mathbf{x})$ is a <strong>zero-intercept</strong> linear function of $\mathbf{D}(\mathbf{x})$. In practice, however, real underwater imaging deviates from this simplified setting: backscatter, spatially varying attenuation, sensor response, and nonlinear in-camera processing (e.g., gamma correction and tone mapping) all distort the observed intensities, so the simple zero-intercept relation between log-transmission and depth does not hold exactly.
+          </p>
+          <p>
+            Similar concerns have been raised in terrestrial dehazing. The classical atmospheric scattering model (ASM) accounts for only a single haze factor and fails to explain additional degradations such as light trapping, noise, and blur, which leads to a pronounced domain gap between ASM-synthesized and real hazy images. Feng <em>et al.</em> address this with a multi-degradation hazy imaging model:
+          </p>
+          <div class="math-block">
+            $$\mathbf{I}(\mathbf{x}) = \mathbf{F}(\mathbf{x}) \Big( A^{\gamma}\big(\mathbf{J}(\mathbf{x})\, \mathbf{T}^{\gamma}(\mathbf{x}) + 1 - \mathbf{T}^{\gamma}(\mathbf{x}) \big) + \mathbf{N} \Big), \tag{S2}$$
+          </div>
+          <p>
+            in which the transmission term appears as $\mathbf{T}^{\gamma}(\mathbf{x})$ and is further scaled by $A^{\gamma}$. Thus, even if the underlying physical transmission obeys Beer&ndash;Lambert, the <em>effective</em> transmission inside the imaging model is a power-law&ndash;distorted version of it.
+          </p>
+        </div>
+
+        <!-- 3. Surrogate model -->
+        <h3 class="subsection-title">Step 2: Modeling the Transmission Surrogate</h3>
+        <div class="content-text">
+          <p>
+            A crucial observation is that the network never observes $\mathbf{T}_{\text{phys},c}(\mathbf{x})$ directly&mdash;it only sees RGB intensities after underwater optics, camera response, in-camera processing, and data augmentations. As a result, the network effectively learns a <strong>transmission surrogate</strong> $\hat{\mathbf{T}}_c(\mathbf{x})$ that plays the role of the transmission term in Eq. (S2), but is related to the true physical transmission only up to an unknown scale and nonlinearity. We model this surrogate as a simple but expressive generalization of the ideal law:
+          </p>
+          <div class="math-block">
+            $$\hat{\mathbf{T}}_c(\mathbf{x}) \approx A_c \, \mathbf{T}_{\text{phys},c}(\mathbf{x})^{\gamma_c}, \tag{S3}$$
+          </div>
+          <p>
+            where $A_c \gt 0$ and $\gamma_c \gt 0$ are channel-wise constants absorbing unknown gains and nonlinearities. This power-law form is a <em>minimal monotone generalization</em> of the Beer&ndash;Lambert law that naturally arises from camera gamma curves, contrast adjustments, and the rescaling induced by the final activation and normalization layers of the network&mdash;and it has exactly the same structure as the transmission factor in Eq. (S2). The assumption $\gamma_c \gt 0$ ensures the surrogate preserves the monotonic relation between depth and transmission.
+          </p>
+          <p>
+            Substituting Eq. (S1) into Eq. (S3) gives
+          </p>
+          <div class="math-block">
+            $$\hat{\mathbf{T}}_c(\mathbf{x}) \approx A_c \exp\!\big(-\gamma_c \beta_c \mathbf{D}(\mathbf{x})\big) = A_c \exp\!\big(-\tilde{\beta}_c \mathbf{D}(\mathbf{x})\big), \qquad \tilde{\beta}_c = \gamma_c \beta_c. \tag{S4}$$
+          </div>
+          <p>
+            For each channel $c \in \{r,g,b\}$, we work in the log-domain and define the depth-like quantity
+          </p>
+          <div class="math-block">
+            $$s_c(\mathbf{x}) = -\log \hat{\mathbf{T}}_c(\mathbf{x}). \tag{S5}$$
+          </div>
+          <p>Using Eq. (S4), we obtain</p>
+          <div class="math-block">
+            $$s_c(\mathbf{x}) = -\log \hat{\mathbf{T}}_c(\mathbf{x}) \approx -\log A_c + \tilde{\beta}_c\, \mathbf{D}(\mathbf{x}) = \alpha_c\, \mathbf{D}(\mathbf{x}) + c_{0,c}, \tag{S6}$$
+          </div>
+          <p>
+            where $\alpha_c = \tilde{\beta}_c \gt 0$ and $c_{0,c} = -\log A_c$. Eq. (S6) shows that, under the power-law surrogate model, the log-domain surrogate $s_c(\mathbf{x})$ and the metric depth $\mathbf{D}(\mathbf{x})$ are related by an <strong>affine</strong> mapping in general. The ideal Beer&ndash;Lambert case corresponds to $A_c = 1$ and $\gamma_c = 1$, for which $c_{0,c} = 0$ and the mapping reduces to a zero-intercept line. Once $A_c \neq 1$ or $\gamma_c \neq 1$, a non-zero offset $c_{0,c}$ naturally appears.
+          </p>
+        </div>
+
+        <!-- 4. Affine calibration -->
+        <h3 class="subsection-title">Step 3: Affine Calibration with Sparse Depth
+          <span class="tag is-warning is-light" style="vertical-align: middle; margin-left: 0.5rem;">Extended derivation</span>
+        </h3>
+        <div class="content-text">
+          <p>
+            To resolve this affine ambiguity in practice, we calibrate each channel-wise surrogate $s_c(\mathbf{x})$ using sparse metric depth measurements. Let $\{d_i\}$ denote sparse depth samples at pixel locations $\{\mathbf{x}_i\}$, and let $s_c(\mathbf{x}_i)$ be the corresponding log-surrogate values for channel $c$. For each channel, we fit an affine mapping
+          </p>
+          <div class="math-block">
+            $$d_i \approx a_c\, s_c(\mathbf{x}_i) + b_c, \qquad c \in \{r,g,b\}, \tag{S7}$$
+          </div>
+          <p>
+            where $(a_c, b_c)$ are channel-specific scale and offset parameters, estimated by least squares:
+          </p>
+          <div class="math-block">
+            $$(a_c^\ast, b_c^\ast) = \operatorname*{arg\,min}_{a_c,\, b_c} \sum_{i} \big(a_c\, s_c(\mathbf{x}_i) + b_c - d_i\big)^2. \tag{S8}$$
+          </div>
+          <p>
+            By Eq. (S6), in the ideal case the fitted parameters $(a_c^\ast, b_c^\ast)$ recover the effective inverse scale and offset of the surrogate, $\big(1/\alpha_c,\, -c_{0,c}/\alpha_c\big)$, under real imaging conditions. In practice, each channel exhibits different attenuation behavior and noise characteristics, so the quality of the affine fit varies across channels. We therefore evaluate the reconstruction error of each calibrated channel and select the most reliable one:
+          </p>
+          <div class="math-block">
+            $$c^\ast = \operatorname*{arg\,min}_{c \in \{r,g,b\}} \sum_{i} \big(a_c^\ast\, s_c(\mathbf{x}_i) + b_c^\ast - d_i\big)^2. \tag{S9}$$
+          </div>
+          <p>
+            The final metric depth prior used in our framework is the calibrated surrogate of the best channel:
+          </p>
+          <div class="math-block">
+            $$\hat{d}(\mathbf{x}) = a_{c^\ast}^\ast\, s_{c^\ast}(\mathbf{x}) + b_{c^\ast}^\ast. \tag{S10}$$
+          </div>
+          <p>
+            This selection strategy picks the channel least affected by absorption and scattering, providing a sparsity-robust, boundary-preserving initialization for the subsequent PGPS refinement. Eqs. (S7)&ndash;(S10) correspond to Eqs. (7)&ndash;(9) in Sec. IV-B of the main paper.
+          </p>
+          <p>
+            <strong>Why not force $b_c = 0$?</strong> Forcing a zero offset would incorrectly impose the idealized zero-intercept relation from Eq. (S1) directly on the learned surrogate, contradicting the generalized affine form of Eq. (S6). Empirically, constraining $b_c = 0$ consistently degrades performance, whereas full affine calibration yields a more stable and accurate metric depth prior&mdash;confirming that real underwater data and the learned transmission surrogate do not strictly follow a zero-intercept model, and that the affine depth conversion used in the main paper is both physically plausible and practically necessary.
           </p>
         </div>
 
         <!-- Ablation -->
-        <h3 class="subsection-title">Ablation: Affine vs. Scale-Only</h3>
+        <h3 class="subsection-title">Ablation: Affine vs. Scale-Only Conversion</h3>
+        <div class="content-text">
+          <p>
+            We quantify the effect of the offset term by comparing the full affine conversion (PGSPN) against a scale-only variant (PGSPN$^\ast$, $b{=}0$). RMSE (m) is reported on two sequences under SfM 100% and Bias 60% sparse inputs.
+          </p>
+        </div>
 
         <div class="table-wrapper">
           <table class="pgspn-table">
@@ -131,7 +232,95 @@
 
         <div class="content-text">
           <p>
-            The affine variant consistently achieves 14&ndash;45% lower RMSE. The gain is largest under high sparsity (Bias 60%), where fewer calibration points make the offset correction more critical.
+            The affine variant consistently achieves 14&ndash;45% lower RMSE. The largest improvement appears under Bias 60% on flatiron (&darr;45.1%), suggesting that the offset becomes particularly important when available measurements are strongly reduced. Enforcing a zero-intercept relation introduces a systematic mismatch, whereas affine calibration better matches the true depth scale in practice.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Sparse Depth Distribution Analysis ==================== -->
+<section class="section section-alt" id="sparse-analysis">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Analysis of Underwater Sparse Depth Distribution</h2>
+
+        <div class="content-text">
+          <p>
+            Why is underwater depth completion fundamentally harder than its terrestrial counterpart? To characterize the data regime, we analyze the spatial distribution of valid depth in terrestrial (KITTI) and underwater (FLSea-Stereo, FLSea-VI) datasets. While KITTI provides relatively dense and uniformly distributed valid depth, underwater scenes exhibit large measurement-free regions associated with open water or degraded visibility.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/env_sample.png" alt="Depth-support regions in terrestrial vs underwater datasets">
+          <p class="figure-caption">
+            <strong>Qualitative comparison of depth-support regions.</strong>
+            (a) Sample from KITTI; (b)&ndash;(c) samples from FLSea-Stereo and FLSea-VI. Underwater scenes contain extensive unsupervised regions, often corresponding to open water or visually degraded areas.
+          </p>
+        </div>
+
+        <div class="content-text">
+          <p>
+            We quantify point density via a grid-occupancy measure: each depth map is partitioned into $32 \times 32$ and $64 \times 64$ grids, and a cell counts as <em>occupied</em> if it contains at least one valid depth sample. With $N_{\text{grid}}$ total cells and $N_{\text{occ}}$ occupied cells, the <strong>Occupied Grids Ratio</strong> (OGR) is
+          </p>
+          <div class="math-block">
+            $$\mathrm{OGR} = \frac{N_{\text{occ}}}{N_{\text{grid}}}.$$
+          </div>
+          <p>
+            Computed per frame and averaged over each sequence, underwater datasets exhibit markedly lower OGR than KITTI (32&times;32 grid: 86.32% for KITTI vs. 50.20% / 47.52% for FLSea-Stereo / FLSea-VI; 64&times;64 grid: 92.03% vs. 53.98% / 51.23%), indicating large contiguous regions without depth support&mdash;especially at the finer grid resolution. This sparsity pattern underlies depth bleeding and motivates the physics-guided priors in PGSPN.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/env_graph.png" alt="Grid-wise occupied depth ratios across datasets" style="max-width: 58%;">
+          <p class="figure-caption">
+            <strong>Grid-wise occupied depth ratios across datasets.</strong>
+            Fraction of grid cells containing at least one valid depth point for (a) $32 \times 32$ and (b) $64 \times 64$ partitions. Underwater datasets show markedly lower occupancy than KITTI, highlighting the prevalence of large supervision-free regions.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Depth Bleeding Index ==================== -->
+<section class="section" id="dbi">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Depth Bleeding Index: Per-Sample Analysis &amp; Joint Interpretation</h2>
+
+        <div class="content-text">
+          <p>
+            The DBI definition, synthetic open-water generation, and reliability analysis against real open-water regions are given in Sec. V-A of the main paper. Here we complement them with per-sample examples and discuss how DBI should be read <em>together with</em> the standard pointwise accuracy metrics.
+          </p>
+        </div>
+
+        <h3 class="subsection-title">Per-Sample Examples</h3>
+        <div class="content-text">
+          <p>
+            Per-sample DBI values align with the aggregate trends in the main paper: PGSPN consistently achieves the lowest DBI (0.254, 0.432), indicating well-preserved discontinuities at open-water boundaries, while BP-Net exhibits the highest DBI (0.781, 0.621) with visible bleeding into the synthetic open-water region; DySPN falls in between (0.511, 0.551). This confirms that DBI meaningfully captures the severity of bleeding artifacts at the individual image level.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/dbi_qualitative.png" alt="Qualitative DBI examples" style="max-width: 75%;">
+          <p class="figure-caption">
+            <strong>Qualitative DBI examples</strong> under SfM 100% input. Lower DBI indicates better-preserved depth discontinuities at open-water boundaries.
+          </p>
+        </div>
+
+        <h3 class="subsection-title">Reading DBI Together with Pointwise Accuracy</h3>
+        <div class="content-text">
+          <p>
+            DBI measures depth discontinuity <em>preservation</em> at open-water boundaries&mdash;by design, it does not directly reflect pointwise depth accuracy within the evaluated regions. For instance, a method producing sharp but biased predictions at boundaries may still achieve a favorable DBI score, and DBI does not exclusively isolate bleeding from other discontinuity sources. This is why, in all experiments, we jointly report DBI alongside standard metrics (MAE, RMSE, $\delta_k$) computed over GT-valid regions: the two views are complementary, and bleeding suppression should always be interpreted in the context of overall depth accuracy. A method is only convincing when it scores well on <em>both</em>&mdash;as PGSPN does across all sequences and sparsity conditions.
+          </p>
+          <p>
+            Since open-water regions inherently lack ground-truth depth, directly measuring bleeding against ground truth is impossible; DBI offers a practical alternative using reliable boundary predictions as references. We hope this metric, interpreted jointly with pointwise accuracy, provides a useful baseline for future work on evaluating depth completion in supervision-free regions.
           </p>
         </div>
       </div>
@@ -151,7 +340,7 @@
         <h3 class="subsection-title">Cross-Dataset Validation on SeaThru D3</h3>
         <div class="content-text">
           <p>
-            We evaluate generalization on SeaThru D3 using our FLSea-trained model <em>without fine-tuning</em>. The performance gap over baselines widens as sparsity increases, confirming that the physics-guided prior generalizes across environments.
+            We evaluate generalization on SeaThru D3 using our FLSea-trained model <em>without fine-tuning</em>. PGSPN consistently outperforms baselines (PENet, TWISE, DySPN, CompletionFormer, BP-Net) across both sampling patterns and all metrics. Notably, the performance gap widens as sparsity increases: under extreme conditions (50&ndash;100 uniform points or 10&ndash;20% biased ratio), competing methods degrade significantly while PGSPN maintains stable accuracy&mdash;the physics-guided prior provides robust depth initialization independent of measurement density, enabling effective generalization to unseen underwater environments.
           </p>
         </div>
 
@@ -165,6 +354,11 @@
 
         <!-- Results on cross_pyramid_loop -->
         <h3 class="subsection-title">Results on cross_pyramid_loop (&starf;&starf;)</h3>
+        <div class="content-text">
+          <p>
+            The main paper reports quantitative results on rock_garden1 and flatiron as representative sequences of high and low difficulty. For completeness, we report results on the remaining test sequence cross_pyramid_loop (&starf;&starf;, moderate difficulty) from FLSea-VI.
+          </p>
+        </div>
 
         <div class="table-wrapper">
           <table class="pgspn-table">
@@ -180,20 +374,64 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td class="text-left">PENet</td><td>0.160</td><td>0.997</td><td>0.441</td><td>0.314</td><td>0.961</td><td>0.401</td></tr>
-              <tr><td class="text-left">DySPN</td><td class="rank-1">0.047</td><td>0.999</td><td class="rank-2">0.201</td><td>0.326</td><td>0.885</td><td class="rank-2">0.193</td></tr>
-              <tr><td class="text-left">LRRU</td><td>0.113</td><td>0.998</td><td>0.621</td><td>0.342</td><td>0.939</td><td>0.555</td></tr>
+              <tr><td class="text-left">PENet</td><td>0.160</td><td class="rank-3">0.997</td><td>0.441</td><td>0.314</td><td class="rank-3">0.961</td><td>0.401</td></tr>
+              <tr><td class="text-left">DySPN</td><td class="rank-1">0.047</td><td class="rank-1">0.999</td><td class="rank-3">0.201</td><td>0.326</td><td>0.885</td><td class="rank-3">0.193</td></tr>
+              <tr><td class="text-left">LRRU</td><td>0.113</td><td class="rank-2">0.998</td><td>0.621</td><td>0.342</td><td>0.939</td><td>0.555</td></tr>
               <tr><td class="text-left">MSPN</td><td>0.174</td><td>0.992</td><td>0.552</td><td>0.633</td><td>0.842</td><td>0.518</td></tr>
-              <tr><td class="text-left">BP-Net</td><td class="rank-2">0.053</td><td class="rank-1">0.999</td><td>0.448</td><td>0.304</td><td>0.936</td><td>0.406</td></tr>
+              <tr><td class="text-left">BP-Net</td><td class="rank-2">0.053</td><td class="rank-1">0.999</td><td>0.448</td><td class="rank-3">0.304</td><td>0.936</td><td>0.406</td></tr>
               <tr><td class="text-left"><strong>PGSPN-prior</strong></td><td>0.121</td><td>0.993</td><td class="rank-1">0.181</td><td class="rank-2">0.166</td><td class="rank-2">0.989</td><td class="rank-1">0.175</td></tr>
-              <tr><td class="text-left"><strong>PGSPN</strong></td><td class="rank-3">0.095</td><td class="rank-1">0.999</td><td>0.185</td><td class="rank-1">0.141</td><td class="rank-1">0.991</td><td>0.180</td></tr>
+              <tr><td class="text-left"><strong>PGSPN</strong></td><td class="rank-3">0.095</td><td class="rank-1">0.999</td><td class="rank-2">0.185</td><td class="rank-1">0.141</td><td class="rank-1">0.991</td><td class="rank-2">0.180</td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="content-text">
           <p>
-            PGSPN achieves the best DBI across both sparsity conditions, confirming strongest bleeding suppression regardless of whether overall RMSE is optimal. Under Bias 60%, PGSPN also leads in RMSE (0.141 m) and $\delta_1$ (0.991).
+            The results follow the trends observed in the main paper. Under Bias 60%, where sparse coverage is limited, PGSPN achieves the best RMSE (0.141 m) and $\delta_1$ (0.991). Under SfM 100%, where measurements are abundant, DySPN attains the lowest RMSE (0.047 m) through effective interpolation, with PGSPN third (0.095 m). However, PGSPN(-prior) consistently achieves the best DBI across both conditions (0.181 / 0.175), substantially outperforming DySPN (0.201 / 0.193) and BP-Net (0.448 / 0.406)&mdash;confirming the strongest depth bleeding suppression regardless of whether overall RMSE is optimal.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Framework-Level Contributions ==================== -->
+<section class="section" id="framework">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Framework-Level Contributions</h2>
+
+        <div class="content-text">
+          <p>
+            PGSPN deliberately reuses proven architectures&mdash;AdaBins for transmission estimation and LRRU for depth refinement&mdash;with minimal modifications. A natural question is whether the observed improvements stem from these architectural components or from our <em>framework-level</em> design: the two-stage training strategy, photometric supervision, transmission-based depth conversion, and physics-guided propagation suppression. Two pieces of evidence show the contribution lies in the latter.
+          </p>
+          <p>
+            <strong>TRUDepth vs. PGSPN-prior.</strong> TRUDepth is a monocular depth-regression baseline built on the same AdaBins backbone as our Stage 1 network, differing only in output-layer dimensionality. Yet PGSPN-prior consistently outperforms TRUDepth across all sequences and sparsity conditions&mdash;e.g., on rock_garden1 under SfM 100%, MAE decreases from 0.236 m to 0.164 m and DBI from 0.296 to 0.211. Because the backbone is shared, this gap arises entirely from the training strategy: replacing monocular depth regression with per-channel transmission estimation, photometric restoration loss, and affine depth conversion. The architectural modification is minimal; the methodological change is decisive.
+          </p>
+          <p>
+            <strong>LRRU vs. LRRU + our prior.</strong> The vanilla LRRU baseline, initialized from sparse depth alone, achieves MAE 0.219 and DBI 0.724 on rock_garden1. Simply replacing this initialization with our transmission-based prior&mdash;without any change to the LRRU architecture or loss&mdash;reduces MAE to 0.090 ($2.43\times$ improvement) and DBI to 0.258 ($\downarrow$64.3%). LRRU's severe degradation under underwater sparsity is not an architectural limitation but an <em>initialization problem</em> that the physics-guided prior directly resolves.
+          </p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="pgspn-table">
+            <thead>
+              <tr><th>Comparison (rock_garden1, SfM 100%)</th><th>MAE &darr;</th><th>DBI &darr;</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="text-left">TRUDepth (same AdaBins backbone, architecture-equivalent baseline)</td><td>0.236</td><td>0.296</td></tr>
+              <tr><td class="text-left"><strong>PGSPN-prior</strong> (ours: transmission + photometric supervision)</td><td class="rank-1">0.164</td><td class="rank-1">0.211</td></tr>
+              <tr><td class="text-left">LRRU (sparse-only initialization)</td><td>0.219</td><td>0.724</td></tr>
+              <tr><td class="text-left"><strong>LRRU + our prior</strong> (identical architecture &amp; loss)</td><td class="rank-1">0.090 (2.43&times;)</td><td class="rank-1">0.258 (&darr;64.3%)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="content-text">
+          <p>
+            <strong>Summary.</strong> PGSPN's contribution lies in problem identification and physics-guided framework design rather than component-level architecture engineering. By formulating underwater depth completion as a two-stage physics-guided pipeline with photometric supervision, we transform existing architectures into systems that robustly handle irregular sparsity and depth bleeding. This architecture-agnostic design also means future backbone improvements can be readily integrated into the framework.
           </p>
         </div>
       </div>
@@ -203,7 +441,7 @@
 
 
 <!-- ==================== Computational & Turbidity ==================== -->
-<section class="section" id="analysis-section">
+<section class="section section-alt" id="analysis-section">
   <div class="container is-max-fullhd">
     <div class="columns is-centered">
       <div class="column is-four-fifths">
@@ -213,16 +451,19 @@
         <h3 class="subsection-title">Computational Cost</h3>
         <div class="content-text">
           <p>
-            PGPS adds negligible cost (0.6 ms desktop, 4.2 ms AGX Orin) for 18.2% DBI reduction. With TensorRT (FP16), PGSPN achieves <strong>8.1 Hz</strong> on Jetson AGX Orin&mdash;sufficient for keyframe-based underwater mapping at 0.5&ndash;2 m/s.
+            We analyze per-module cost on an RTX 3090 Ti and NVIDIA Jetson AGX Orin at 640&times;384 resolution. The transmission estimation stage (29.76M parameters) accounts for the majority of inference time as it processes full-resolution images through an encoder&ndash;decoder network&mdash;but it is indispensable, since replacing LRRU's sparse-only initialization with our prior reduces MAE from 0.219 to 0.090 and DBI by 64.3%. The depth refinement stage (17.96M + 2.89M parameters) adds modest overhead, and PGPS itself requires only element-wise operations on the affinity weights, contributing negligible cost (0.6 ms desktop, 4.2 ms AGX Orin) for an additional 18.2% DBI reduction.
+          </p>
+          <p>
+            For deployment feasibility, we benchmark on Jetson AGX Orin under progressive optimization: FP32 runs at 2.6 Hz, mixed-precision (AMP) at 4.1 Hz, <code>torch.compile</code> at 3.6 Hz, both combined at 6.3 Hz, and TensorRT (FP16) reaches <strong>8.1 Hz</strong>&mdash;sufficient for keyframe-based underwater mapping and obstacle avoidance where robots typically operate at 0.5&ndash;2 m/s and process every 3rd&ndash;5th frame.
           </p>
         </div>
 
         <div class="figure-container">
-          <img src="./static/images/computational_cost.png" alt="Computational cost analysis" style="max-width: 60%;">
+          <img src="./static/images/computational_cost.png" alt="Computational cost analysis" style="max-width: 70%;">
           <p class="figure-caption">
             <strong>Computational cost analysis.</strong>
             (a) Per-component inference time and parameters on RTX 3090 Ti and AGX Orin (640&times;384).
-            (b) Progressive optimization on AGX Orin: FP32 &rarr; TensorRT FP16 (8.1 Hz).
+            (b) Progressive optimization on AGX Orin: FP32, AMP, torch.compile, Full (AMP + compile), and TensorRT FP16 (8.1 Hz).
           </p>
         </div>
 
@@ -230,7 +471,7 @@
         <h3 class="subsection-title">Impact of Water Turbidity</h3>
         <div class="content-text">
           <p>
-            Evaluated on Joint-ID with Jerlov water types (5C&ndash;I). PGSPN's advantage is strongest under high turbidity where photometric cues are rich, and narrows in clearer water&mdash;but never falls behind baselines. Reduced turbidity diminishes our advantage without introducing disadvantage.
+            Our framework leverages optical attenuation as a depth cue&mdash;so how does performance vary with water clarity? We evaluate on the Joint-ID synthetic dataset, which provides controlled turbidity via Jerlov water types from 5C (highly turbid) to I (near-clear) with corresponding attenuation coefficients $(\beta_r, \beta_g, \beta_b)$. PGSPN's advantage is strongest under high turbidity (types 5C&ndash;1C), where wavelength-dependent attenuation produces rich photometric cues for the transmission network. As turbidity decreases toward clear water (types IB&ndash;I), the attenuation signal weakens and the gap narrows&mdash;but PGSPN never falls behind: it remains competitive with the best baselines (DySPN, TWISE), because the depth completion backbone (LRRU + PGPS) retains effectiveness regardless of the photometric prior's informativeness. Reduced turbidity diminishes our <em>advantage</em> without introducing any <em>disadvantage</em>, making PGSPN well-suited for the turbid conditions common in real underwater operations.
           </p>
         </div>
 
@@ -238,7 +479,83 @@
           <img src="./static/images/turbidity_analysis.png" alt="Impact of water turbidity" style="max-width: 42%;">
           <p class="figure-caption">
             <strong>Turbidity impact.</strong>
-            RMSE across Jerlov water types (5C: highly turbid &rarr; I: near-clear). PGSPN leads under turbid conditions and remains competitive in clear water.
+            RMSE across Jerlov water types (5C: highly turbid &rarr; I: near-clear) on Joint-ID. PGSPN leads under turbid conditions and remains competitive in clear water.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Robustness & Limitations ==================== -->
+<section class="section" id="limitations">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Robustness Analysis</h2>
+
+        <div class="content-text">
+          <p>
+            Complementing the limitation analysis in the main paper (Sec. V-E), we examine robustness aspects that could not be covered there: behavior under <em>real sensor noise</em>, an <em>optional strategy</em> for rejecting gross outliers in the sparse depth used for affine calibration, and dependence on the <em>quality of the photometric reference images</em>.
+          </p>
+        </div>
+
+        <!-- Sensor noise -->
+        <h3 class="subsection-title">Robustness to Sparse Depth Noise (Real Sonar)</h3>
+        <div class="content-text">
+          <p>
+            Our main experiments sample sparse depth from ground truth to isolate sparsity patterns from sensor noise. To examine behavior under real sensor noise, we evaluate on sonar-RGB imagery where sparse depth comes directly from sonar measurements. PGSPN produces more coherent depth maps than baselines under noisy sparse inputs, since the transmission-based prior is derived entirely from RGB observations and is therefore unaffected by sparse depth noise. We note the noise level in this dataset is relatively mild: systematic evaluation under severe measurement noise (multi-path reflections, gross triangulation failures) and with diverse real sensor modalities remains future work&mdash;our Bias configuration captures the spatial distribution of FoV-limited sensors such as sonar, but not their sensor-specific noise properties.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/generalization_sonar.png" alt="Evaluation under real sonar sensor noise" style="max-width: 62%;">
+          <p class="figure-caption">
+            <strong>Evaluation under real sensor noise.</strong>
+            Qualitative depth completion on sonar-RGB imagery with real measurement noise. PGSPN produces more coherent results than TWISE, DySPN, and BP-Net.
+          </p>
+        </div>
+
+        <!-- Outlier robustness -->
+        <h3 class="subsection-title">Additional Strategy: Robust Rejection of Sparse Depth Outliers</h3>
+        <div class="content-text">
+          <p>
+            PGSPN calibrates its transmission-derived pseudo-depth to metric scale by fitting a per-channel affine map $D_{\text{prior}} = s\,\tilde{D}_c + b$ to the sparse measurements via least squares (Eqs. (6)&ndash;(9) of the main paper; see the <a href="#derivation">surrogate derivation</a> above). The main-paper experiments sample sparse depth from ground truth to isolate sparsity patterns from sensor noise, so gross outliers do not arise there and the plain least-squares fit suffices. In real-sensor deployment, however, the sparse depth from stereo triangulation, SfM, or sonar can carry <em>gross outliers</em>&mdash;feature mismatches, specular reflections, multi-path returns&mdash;and because ordinary least squares (OLS) minimizes <em>squared</em> residuals, even a handful can dominate the objective and skew $s$ and $b$ globally, corrupting the <em>entire</em> dense prior rather than a few pixels. Below we explore an <em>optional</em> robust-calibration strategy that could be plugged into this stage for such conditions&mdash;it is <strong>not</strong> part of the main-paper pipeline.
+          </p>
+          <p>
+            <strong>An optional robust fit.</strong> One effective option is to replace plain OLS with an iteratively reweighted, median-based robust fit (a toggleable component in our implementation, off by default). Starting from the OLS estimate, each iteration would compute the residuals $r(x) = \big(s\,\tilde{D}_c(x) + b\big) - D_s(x)$ over the valid sparse pixels and derive a robust spread from their median absolute deviation (MAD):
+          </p>
+          <div class="math-block">
+            $$\sigma = \max\!\left(1.4826\,\operatorname{MAD}(r),\; 0.05\,\text{m}\right), \qquad x \text{ is an inlier} \iff \bigl| r(x) - \operatorname{median}(r) \bigr| \le \tau\,\sigma.$$
+          </div>
+          <p>
+            Centering on the <em>median</em> rather than the mean is what makes the test robust; the constant $1.4826$ rescales the MAD to a Gaussian-consistent standard deviation. Points outside the band would be discarded and the affine map re-fit on the survivors, repeating a few times (we use threshold $\tau = 3$ in the sweep below). Two design choices would keep such a scheme stable under underwater sparsity: (i)&nbsp;a <strong>MAD floor</strong> of $0.05$&nbsp;m prevents the band from collapsing to zero when a clean inlier majority drives the MAD toward zero&mdash;without it, obvious gross outliers would fall <em>inside</em> a vanishingly narrow band and escape rejection; and (ii)&nbsp;a set of <strong>safety guards</strong> that halt the loop when no point lies outside the band (converged), when too few inliers remain, when the survivors lose their spread in $\tilde{D}_c$, or when the fit stops changing&mdash;so aggressive rejection never collapses the calibration on already-scarce inputs. The rejected pixels can be exposed as a mask for inspection at inference.
+          </p>
+          <p>
+            <strong>How the threshold would behave.</strong> To characterize the strategy, the figure sweeps the rejection threshold $\tau$ under three synthetic outlier ratios (5%, 10%, 15%), tracking both how well the flagged points recover the injected outliers (F1) and the resulting depth accuracy (RMSE). Outlier-detection F1 is highest at tight thresholds and falls off as $\tau$ grows and the band begins to admit true outliers, with the decline steepening at higher outlier ratios. Final RMSE, by contrast, stays low and nearly flat across a broad range of $\tau$&mdash;the completed depth is largely insensitive to the exact threshold&mdash;and rises only when $\tau$ becomes so tight that genuine inliers are rejected and the fit destabilizes. A value of $\tau = 3$ sits in this stable regime while still removing the bulk of gross outliers; the error maps (right, 15% outliers) show the metric structure recovered with rejection versus a globally skewed calibration without it.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/sparse_dep_outlier_analysis.png" alt="Sparse-depth outlier robustness in affine calibration" style="max-width: 82%;">
+          <p class="figure-caption">
+            <strong>Sparse-depth outlier robustness in affine calibration.</strong>
+            (a) Outlier-detection F1 and depth RMSE as the MAD rejection threshold $\tau$ varies, for 5% / 10% / 15% injected outlier ratios&mdash;RMSE is stable across a wide threshold range while F1 peaks at tighter thresholds. (b) Error maps at 15% outliers, without (w/o) and with (w/) robust rejection.
+          </p>
+        </div>
+
+        <div class="content-text">
+          <p>
+            <strong>Limitation.</strong> Were such a scheme adopted, a few caveats would apply. Because F1 favors a tight band while RMSE is robust across a wide one, no single global $\tau$ is simultaneously optimal for every outlier ratio&mdash;the F1-optimal threshold tightens as the outlier fraction grows, so a fixed $\tau$ would be a deliberate compromise. The MAD test also assumes an inlier majority: under very high outlier fractions, or spatially clustered rather than randomly scattered outliers, the median/MAD estimates are themselves biased and rejection weakens. And because the safety guards suppress rejection once too few points remain, some residual outliers could survive under extreme sparsity. Robustly handling severe, structured measurement noise (multi-path returns, gross triangulation failures) therefore remains future work, consistent with the sensor-noise limitation noted above and in the main paper.
+          </p>
+        </div>
+
+        <!-- Reference robustness -->
+        <h3 class="subsection-title">Robustness to Photometric Reference Image Quality</h3>
+        <div class="content-text">
+          <p>
+            Stage 1 photometric supervision relies on haze-free reference images generated by existing restoration methods (SyReANet, Sea-Thru). Does their quality critically affect performance? Two observations suggest robustness: (1) the estimated per-channel transmission maps remain remarkably consistent across extreme sparse-input variations (Bias 20% to Uniform 400 points&mdash;see the <a href="#qualitative">transmission visualizations</a> below), indicating the photometric loss captures the <em>global attenuation structure</em> of the scene rather than fine-grained pixel-level fidelity of the references; and (2) swapping the restoration network among SyReANet, Trident, and Joint-ID yields nearly identical results (Fig. 13(b) of the main paper). Moderate inaccuracies such as residual color cast or imperfect dehazing do not alter the learned transmission geometry, whose dominant signal&mdash;exponential decay with depth&mdash;is robust to such perturbations. Systematic ablation with intentionally degraded references remains future work.
           </p>
         </div>
       </div>
@@ -254,11 +571,27 @@
       <div class="column is-four-fifths">
         <h2 class="title is-3">Additional Qualitative Results</h2>
 
-        <!-- PGPS Ablation -->
-        <h3 class="subsection-title">PGPS Ablation</h3>
+        <!-- Cross-domain validation -->
+        <h3 class="subsection-title">Cross-Domain Validation on Real Underwater Imagery</h3>
         <div class="content-text">
           <p>
-            Without PGPS, depth bleeds into open-water regions. With PGPS, sharp boundaries are preserved while maintaining smooth intra-object depth.
+            We test on real underwater imagery from Joshi <em>et al.</em>, with sparse depth obtained via stereo feature matching and triangulation. Since no ground-truth depth is available, we evaluate qualitatively under two challenging scenarios: (a) spatially biased sparse depth concentrated on one side, and (b) very few points with a more uniform distribution. Baseline methods fail under both conditions, while PGSPN produces plausible depth maps in both cases owing to the transmission-based prior.
+          </p>
+        </div>
+
+        <div class="figure-container">
+          <img src="./static/images/generalization_main.png" alt="Cross-domain qualitative validation" style="max-width: 60%;">
+          <p class="figure-caption">
+            <strong>Cross-domain qualitative validation.</strong>
+            Results on real underwater imagery from Joshi et al. with sparse depth from stereo feature matching. (a) Spatially biased distribution. (b) Sparse but more uniform distribution with very few points.
+          </p>
+        </div>
+
+        <!-- PGPS Ablation -->
+        <h3 class="subsection-title">PGPS Qualitative Ablation</h3>
+        <div class="content-text">
+          <p>
+            Without PGPS, erroneous depth propagates into open-water regions, creating visible artifacts at object boundaries. With PGPS, bleeding is prevented while smooth depth within objects is maintained.
           </p>
         </div>
 
@@ -271,24 +604,36 @@
         </div>
 
         <!-- Transmission Visualization -->
-        <h3 class="subsection-title">Transmission and Restoration</h3>
+        <h3 class="subsection-title">Transmission and Restoration Across Sparsity Patterns</h3>
         <div class="content-text">
           <p>
-            Per-channel transmission maps remain consistent despite extreme sparsity variation (Bias 20% to Uniform 400 pts), confirming that photometric supervision captures global attenuation structure independently of measurement density.
+            Estimated transmission maps, ambient light, and restored images across varying sparse depth patterns. Despite extreme sparsity variation (Bias 20% to Uniform 400 pts), per-channel transmission maps remain remarkably consistent, capturing wavelength-dependent attenuation independently of measurement density. Ambient light estimation is likewise stable, and the enhanced images show effective backscatter removal while preserving scene structure&mdash;validating that photometric supervision enables sparsity-robust transmission estimation and reliable depth priors even when geometric measurements are scarce or spatially biased.
           </p>
         </div>
 
         <!-- Tab switcher: Transmission -->
         <div class="tabs is-centered is-boxed" style="margin-bottom: 0;">
           <ul>
-            <li class="is-active" data-target="trans-vi"><a>FLSea-VI</a></li>
+            <li class="is-active" data-target="trans-vi"><a>FLSea-VI (1)</a></li>
+            <li data-target="trans-vi2"><a>FLSea-VI (2)</a></li>
+            <li data-target="trans-vi3"><a>FLSea-VI (3)</a></li>
             <li data-target="trans-stereo"><a>FLSea-Stereo</a></li>
           </ul>
         </div>
         <div class="tab-content-panels">
           <div id="trans-vi" class="tab-panel is-active">
             <div class="figure-container" style="margin-top: 0;">
-              <img src="./static/images/transmission_0.png" alt="Transmission visualization on FLSea-VI">
+              <img src="./static/images/transmission_0.png" alt="Transmission visualization on FLSea-VI (1)">
+            </div>
+          </div>
+          <div id="trans-vi2" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/transmission_1.png" alt="Transmission visualization on FLSea-VI (2)">
+            </div>
+          </div>
+          <div id="trans-vi3" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/transmission_2.png" alt="Transmission visualization on FLSea-VI (3)">
             </div>
           </div>
           <div id="trans-stereo" class="tab-panel">
@@ -298,14 +643,14 @@
           </div>
         </div>
         <p class="figure-caption has-text-centered">
-          Rows: sparse depth, ambient light, transmission (R/G/B), enhanced image, depth output.
+          Rows: sparse depth, ambient light (B), transmission (R/G/B), enhanced image, depth output.
         </p>
 
         <!-- Qualitative Comparisons -->
-        <h3 class="subsection-title">Depth Completion Comparisons</h3>
+        <h3 class="subsection-title">Per-Sequence Depth Completion Comparisons</h3>
         <div class="content-text">
           <p>
-            Comparisons across all three test sequences under varying sparsity. Baselines exhibit depth bleeding or catastrophic failure under biased inputs; PGSPN maintains sharp boundaries throughout.
+            Extended comparisons on five diverse underwater scenes from FLSea-Stereo and FLSea-VI under 9 sparsity conditions each. Baselines exhibit either severe depth bleeding in open-water regions or catastrophic failures under spatially biased inputs; PGSPN consistently reconstructs accurate geometry with sharp object boundaries regardless of the sparse depth distribution.
           </p>
         </div>
 
@@ -315,6 +660,8 @@
             <li class="is-active" data-target="qual-flatiron"><a>flatiron</a></li>
             <li data-target="qual-crosspyramid"><a>cross_pyramid_loop</a></li>
             <li data-target="qual-rockgarden"><a>rock_garden1</a></li>
+            <li data-target="qual-bigdice"><a>big_dice_loop</a></li>
+            <li data-target="qual-canyon"><a>canyon1</a></li>
           </ul>
         </div>
         <div class="tab-content-panels">
@@ -331,6 +678,16 @@
           <div id="qual-rockgarden" class="tab-panel">
             <div class="figure-container" style="margin-top: 0;">
               <img src="./static/images/supp_rockgarden1.png" alt="Qualitative results on rock_garden1">
+            </div>
+          </div>
+          <div id="qual-bigdice" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/supp_bigdice.png" alt="Qualitative results on big_dice_loop">
+            </div>
+          </div>
+          <div id="qual-canyon" class="tab-panel">
+            <div class="figure-container" style="margin-top: 0;">
+              <img src="./static/images/supp_canyon1.png" alt="Qualitative results on canyon1">
             </div>
           </div>
         </div>
