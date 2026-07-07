@@ -530,10 +530,10 @@
               </tr>
               <tr>
                 <td class="text-left"><strong>Affine (ours)</strong></td>
-                <td class="rank-1 csep">0.261 (&darr;21.8%)</td>
+                <td class="rank-1 csep">0.261 (&darr;21.9%)</td>
                 <td class="rank-1">0.386 (&darr;14.2%)</td>
-                <td class="rank-1 csep">0.196 (&darr;20.8%)</td>
-                <td class="rank-1">0.222 (&darr;45.1%)</td>
+                <td class="rank-1 csep">0.196 (&darr;21.0%)</td>
+                <td class="rank-1">0.222 (&darr;45.2%)</td>
               </tr>
             </tbody>
           </table>
@@ -541,7 +541,7 @@
 
         <div class="content-text">
           <p>
-            The affine variant consistently achieves 14&ndash;45% lower RMSE. The largest improvement appears under Bias 60% on flatiron (&darr;45.1%), suggesting that the offset becomes particularly important when available measurements are strongly reduced. Enforcing a zero-intercept relation introduces a systematic mismatch, whereas affine calibration better matches the true depth scale in practice.
+            The affine variant consistently achieves 14&ndash;45% lower RMSE. The largest improvement appears under Bias 60% on flatiron (&darr;45.2%), suggesting that the offset becomes particularly important when available measurements are strongly reduced. Enforcing a zero-intercept relation introduces a systematic mismatch, whereas affine calibration better matches the true depth scale in practice.
           </p>
         </div>
       </div>
@@ -601,18 +601,18 @@
   <div class="container is-max-fullhd">
     <div class="columns is-centered">
       <div class="column is-four-fifths">
-        <h2 class="title is-3">Depth Bleeding Index: Per-Sample Analysis &amp; Joint Interpretation</h2>
+        <h2 class="title is-3">Depth Bleeding Index: Qualitative Analysis &amp; Joint Interpretation</h2>
 
         <div class="content-text">
           <p>
-            The DBI definition, synthetic open-water generation, and reliability analysis against real open-water regions are given in Sec. V-A of the main paper. Here we complement them with per-sample examples and discuss how DBI should be read <em>together with</em> the standard pointwise accuracy metrics.
+            The DBI definition, synthetic open-water generation, and reliability analysis against real open-water regions are given in Sec. V-A of the main paper. Here we complement them with representative qualitative examples and discuss how DBI should be read <em>together with</em> the standard pointwise accuracy metrics.
           </p>
         </div>
 
-        <h3 class="subsection-title">Per-Sample Examples</h3>
+        <h3 class="subsection-title">Representative DBI Values</h3>
         <div class="content-text">
           <p>
-            Per-sample DBI values align with the aggregate trends in the main paper: PGSPN consistently achieves the lowest DBI (0.254, 0.432), indicating well-preserved discontinuities at open-water boundaries, while BP-Net exhibits the highest DBI (0.781, 0.621) with visible bleeding into the synthetic open-water region; DySPN falls in between (0.511, 0.551). This confirms that DBI meaningfully captures the severity of bleeding artifacts at the individual image level.
+            Across the two representative test sequences under SfM 100% input, the DBI values match those reported in the main paper (Table I): PGSPN consistently achieves the lowest DBI (0.211 on rock_garden1, 0.411 on flatiron), indicating well-preserved discontinuities at open-water boundaries, while BP-Net exhibits the highest DBI (0.568, 0.740) with visible bleeding into the synthetic open-water region; DySPN falls in between (0.412, 0.498). The qualitative examples below visualize these differences, confirming that DBI meaningfully captures the severity of bleeding artifacts at open-water boundaries.
           </p>
         </div>
 
