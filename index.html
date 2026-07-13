@@ -175,6 +175,7 @@
           <p style="margin-bottom: 0;">
             <strong>In this section:</strong>
             <a href="#parameters">Parameters Setting</a> &middot;
+            <a href="#notation">Notation &amp; Symbol Table</a> &middot;
             <a href="#architecture">Network Architecture for Transmission Estimation</a> &middot;
             <a href="#dataset">Dataset Details &amp; Experiments Setup</a>
           </p>
@@ -222,6 +223,50 @@
               <tr><td class="text-left">$N$</td><td class="text-left csep">Number of iterative refinement steps</td><td class="csep">3</td></tr>
               <tr class="group-header"><td colspan="3">Network Architecture</td></tr>
               <tr><td class="text-left">$K$</td><td class="text-left csep">Kernel size for deformable convolutional propagation</td><td class="csep">3</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== Notation Summary ==================== -->
+<section class="section" id="notation">
+  <div class="container is-max-fullhd">
+    <div class="columns is-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Notation and Symbol Table</h2>
+        <div class="content-text">
+          <p>
+            This table collects the key symbols used throughout the main paper, grouped by stage&mdash;the underwater imaging model, the transmission-to-metric-depth conversion, and the Physics-Guided Propagation Suppression (PGPS) module. In particular, it clarifies the relative depth discrepancy $\Delta^t_k$ and the physics-guided affinity $\mathbf{A}^t_k$ in the PGPS equations (Eqs. (11)&ndash;(12) of the main paper).
+          </p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="pgspn-table">
+            <thead>
+              <tr><th>Symbol</th><th class="csep">Meaning</th></tr>
+            </thead>
+            <tbody>
+              <tr class="group-header"><td colspan="2">Underwater Imaging &amp; Transmission (Sec. III, IV-A)</td></tr>
+              <tr><td>$\mathbf{I}_c,\ \mathbf{J}_c$</td><td class="text-left csep">Observed underwater image / scene radiance (channel $c\in\{r,g,b\}$)</td></tr>
+              <tr><td>$\hat{\mathbf{T}}_c,\ \mathbf{B}_c$</td><td class="text-left csep">Learned per-channel transmission / ambient backscatter (veiling light)</td></tr>
+              <tr><td>$\beta_c$</td><td class="text-left csep">Wavelength-dependent attenuation coefficient</td></tr>
+              <tr><td>$\mathbf{D},\ \mathbf{D}_s$</td><td class="text-left csep">Metric scene depth / sparse depth input</td></tr>
+
+              <tr class="group-header"><td colspan="2">Metric Depth Prior (Sec. IV-B, Eqs. (6)&ndash;(9))</td></tr>
+              <tr><td>$\tilde{\mathbf{D}}_c=-\log\hat{\mathbf{T}}_c$</td><td class="text-left csep">Per-channel log pseudo-depth</td></tr>
+              <tr><td>$(s_c,\, b_c),\ c^\star$</td><td class="text-left csep">Channel-wise affine scale and offset; selected best channel</td></tr>
+              <tr><td>$\mathbf{D}_{\text{prior}}$</td><td class="text-left csep">Final metric-scale depth prior</td></tr>
+
+              <tr class="group-header"><td colspan="2">PGPS Refinement (Sec. IV-B, Eqs. (10)&ndash;(13))</td></tr>
+              <tr><td>$\mathbf{W}^t,\ \mathbf{O}^t$</td><td class="text-left csep">Predicted affinity weights and deformable sampling offsets</td></tr>
+              <tr><td>$\Delta^t_k$</td><td class="text-left csep">Normalized relative depth gap between the center pixel and its $k$-th deformable neighbor, from $\mathbf{D}_{\text{prior}}$ (Eq. (11))</td></tr>
+              <tr><td>$\mathbf{A}^t_k$</td><td class="text-left csep">Physics-guided affinity suppressing propagation across discontinuities (Eq. (12))</td></tr>
+              <tr><td>$\tau_{\text{rel}},\ \lambda_{\text{PGPS}}$</td><td class="text-left csep">Relative threshold ($0.3$) and suppression strength ($1.2$)</td></tr>
+              <tr><td>$\hat{\mathbf{D}}$</td><td class="text-left csep">Final dense depth output</td></tr>
             </tbody>
           </table>
         </div>
@@ -760,7 +805,7 @@
         <h3 class="subsection-title">Computational Cost</h3>
         <div class="content-text">
           <p>
-            We analyze per-module cost on an RTX 3090 Ti and NVIDIA Jetson AGX Orin at 640&times;384 resolution. The transmission estimation stage (29.76M parameters) accounts for the majority of inference time as it processes full-resolution images through an encoder&ndash;decoder network&mdash;but it is indispensable, since replacing LRRU's sparse-only initialization with our prior reduces MAE from 0.219 to 0.090 and DBI by 64.3%. The depth refinement stage (17.96M + 2.89M parameters) adds modest overhead, and PGPS itself requires only element-wise operations on the affinity weights, contributing negligible cost (0.6 ms desktop, 4.2 ms AGX Orin) for an additional 18.2% DBI reduction.
+            We analyze per-module cost on an RTX 3090 Ti and NVIDIA Jetson AGX Orin at 640&times;384 resolution. The transmission estimation stage has the most parameters (29.76M) and is a substantial cost&mdash;a single full-resolution encoder&ndash;decoder pass (27 ms desktop, 108 ms AGX Orin)&mdash;but it is indispensable, since replacing LRRU's sparse-only initialization with our prior reduces MAE from 0.219 to 0.090 and DBI by 64.3%. The recurrent depth refinement in the spatial-propagation stage (17.96M + 2.89M parameters) is in fact the largest single runtime cost, as its iterative refinement dominates on the AGX Orin&mdash;a cost inherent to spatial-propagation completion and shared by baseline methods. The physics-specific additions are by contrast negligible: PGPS requires only element-wise operations on the affinity weights (0.6 ms desktop, 4.2 ms AGX Orin) yet contributes an additional 18.2% DBI reduction, so the physics guidance is essentially free.
           </p>
           <p>
             For deployment feasibility, we benchmark on Jetson AGX Orin under progressive optimization: FP32 runs at 2.6 Hz, mixed-precision (AMP) at 4.1 Hz, <code>torch.compile</code> at 3.6 Hz, both combined at 6.3 Hz, and TensorRT (FP16) reaches <strong>8.1 Hz</strong>&mdash;sufficient for keyframe-based underwater mapping and obstacle avoidance where robots typically operate at 0.5&ndash;2 m/s and process every 3rd&ndash;5th frame.
@@ -814,7 +859,7 @@
         <h3 class="subsection-title">Robustness to Sparse Depth Noise (Real Sonar)</h3>
         <div class="content-text">
           <p>
-            Our main experiments sample sparse depth from ground truth to isolate sparsity patterns from sensor noise. To examine behavior under real sensor noise, we evaluate on sonar-RGB imagery where sparse depth comes directly from sonar measurements. PGSPN produces more coherent depth maps than baselines under noisy sparse inputs, since the transmission-based prior is derived entirely from RGB observations and is therefore unaffected by sparse depth noise. We note the noise level in this dataset is relatively mild: systematic evaluation under severe measurement noise (multi-path reflections, gross triangulation failures) and with diverse real sensor modalities remains future work&mdash;our Bias configuration captures the spatial distribution of FoV-limited sensors such as sonar, but not their sensor-specific noise properties.
+            Our main experiments sample sparse depth from ground truth to isolate sparsity patterns from sensor noise. To qualitatively illustrate behavior under real sensor noise, we evaluate on sonar-RGB imagery where sparse depth comes directly from sonar measurements. No ground truth is available here, so we do not claim a pointwise win: qualitatively, the baselines propagate the banded, noisy sonar measurements into visible depth artifacts, whereas PGSPN produces a spatially coherent map, consistent with the transmission-based prior's structure being driven predominantly by RGB observations and staying largely insensitive to sparse depth noise, which perturbs mainly the metric scale fitted from the sparse anchors. We note the noise level in this dataset is relatively mild: systematic evaluation under severe measurement noise (multi-path reflections, gross triangulation failures) and with diverse real sensor modalities remains future work&mdash;our Bias configuration captures the spatial distribution of FoV-limited sensors such as sonar, but not their sensor-specific noise properties.
           </p>
         </div>
 
